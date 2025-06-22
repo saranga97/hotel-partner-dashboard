@@ -49,8 +49,6 @@ const Dashboard = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">Dashboard Overview</h1>
-          <p className="text-slate-600 mt-1">Welcome back! Here's what's happening today.</p>
         </div>
         <div className="mt-4 sm:mt-0">
           <div className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">

@@ -25,7 +25,8 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
   const handleLogout = () => {
     localStorage.removeItem("ceylonstay_token");
     localStorage.removeItem("ceylonstay_user");
-    navigate("/login");
+    window.location.href = 'http://localhost:5173/login'
+    // navigate("/login");
   };
 
   const isActive = (path) => location.pathname === path;
