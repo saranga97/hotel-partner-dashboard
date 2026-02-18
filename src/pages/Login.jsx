@@ -12,14 +12,23 @@ const Login = () => {
     const user = params.get("user");
 
     if (token && user) {
-      console.log(user);
       localStorage.setItem("ceylonstay_token", token);
       localStorage.setItem("ceylonstay_user", user);
 
       toast.success("Welcome to Partner Dashboard!");
+      navigate("/");
+    } else {
+      // Check if already logged in
+      const storedToken = localStorage.getItem("ceylonstay_token");
+      const storedUser = localStorage.getItem("ceylonstay_user");
 
-      // Redirect to dashboard home
-      navigate("/"); // <-- This is the correct path (your dashboard is '/')
+      if (storedToken && storedUser) {
+        navigate("/");
+      } else {
+        // No credentials at all — redirect back to main login
+        toast.error("Please login from the main website.");
+        window.location.href = "http://localhost:5173/login";
+      }
     }
   }, [location, navigate]);
 

@@ -1,9 +1,35 @@
 import { useState } from "react";
-import { X, Plus, Trash2, Upload, Image } from "lucide-react";
+import { X, Plus, Trash2, Upload, Image, Clock, Coffee } from "lucide-react";
 import axiosInstance from "../api/axiosInstance";
 import { toast } from "react-toastify";
+import { useNotifications } from "../context/NotificationContext";
+
+const PREDEFINED_AMENITIES = [
+  "TV",
+  "Smart TV",
+  "Smart TV with Netflix",
+  "Smoking Allowed",
+  "No Smoking",
+  "Tea/Coffee Maker",
+  "WiFi",
+  "Breakfast Included",
+  "Attached Bathroom",
+  "Upper Floor",
+  "Ground Floor",
+  "Clothes Rack",
+  "Electric Kettle",
+  "Telephone",
+  "Iron",
+  "Hairdryer",
+  "Desk",
+  "Sitting Area",
+  "Towels",
+  "Bathtub",
+  "Refrigerator",
+];
 
 const AddRoomModal = ({ isOpen, onClose, hotelId, onRoomAdded }) => {
+  const { addNotification } = useNotifications();
   const [roomLabel, setRoomLabel] = useState("");
   const [roomType, setRoomType] = useState("family");
   const [bedTypes, setBedTypes] = useState({
@@ -12,9 +38,20 @@ const AddRoomModal = ({ isOpen, onClose, hotelId, onRoomAdded }) => {
     queen: 0,
     king: 0,
   });
-  const [packages, setPackages] = useState([
-    { checkIn: "", checkOut: "", acType: "AC", price: "" },
-  ]);
+
+  // Night stay fields
+  const [nightStayPrice, setNightStayPrice] = useState("");
+  const [nightStayAcType, setNightStayAcType] = useState("AC");
+  const [defaultCheckInTime, setDefaultCheckInTime] = useState("14:00");
+  const [defaultCheckOutTime, setDefaultCheckOutTime] = useState("12:00");
+
+  // Amenities
+  const [selectedAmenities, setSelectedAmenities] = useState([]);
+  const [customAmenity, setCustomAmenity] = useState("");
+
+  // Day-out packages
+  const [packages, setPackages] = useState([]);
+
   const [images, setImages] = useState([]);
   const [previews, setPreviews] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -26,6 +63,22 @@ const AddRoomModal = ({ isOpen, onClose, hotelId, onRoomAdded }) => {
     }));
   };
 
+  const toggleAmenity = (amenity) => {
+    setSelectedAmenities((prev) =>
+      prev.includes(amenity)
+        ? prev.filter((a) => a !== amenity)
+        : [...prev, amenity]
+    );
+  };
+
+  const addCustomAmenity = () => {
+    const trimmed = customAmenity.trim();
+    if (trimmed && !selectedAmenities.includes(trimmed)) {
+      setSelectedAmenities((prev) => [...prev, trimmed]);
+      setCustomAmenity("");
+    }
+  };
+
   const handlePackageChange = (index, field, value) => {
     setPackages((prev) =>
       prev.map((pkg, i) => (i === index ? { ...pkg, [field]: value } : pkg))
@@ -35,12 +88,11 @@ const AddRoomModal = ({ isOpen, onClose, hotelId, onRoomAdded }) => {
   const addPackage = () => {
     setPackages((prev) => [
       ...prev,
-      { checkIn: "", checkOut: "", acType: "AC", price: "" },
+      { packageName: "", checkInTime: "08:00", checkOutTime: "17:00", acType: "AC", price: "" },
     ]);
   };
 
   const removePackage = (index) => {
-    if (packages.length <= 1) return;
     setPackages((prev) => prev.filter((_, i) => i !== index));
   };
 
@@ -68,7 +120,13 @@ const AddRoomModal = ({ isOpen, onClose, hotelId, onRoomAdded }) => {
     setRoomLabel("");
     setRoomType("family");
     setBedTypes({ single: 0, double: 0, queen: 0, king: 0 });
-    setPackages([{ checkIn: "", checkOut: "", acType: "AC", price: "" }]);
+    setNightStayPrice("");
+    setNightStayAcType("AC");
+    setDefaultCheckInTime("14:00");
+    setDefaultCheckOutTime("12:00");
+    setSelectedAmenities([]);
+    setCustomAmenity("");
+    setPackages([]);
     previews.forEach((p) => URL.revokeObjectURL(p));
     setImages([]);
     setPreviews([]);
@@ -87,11 +145,16 @@ const AddRoomModal = ({ isOpen, onClose, hotelId, onRoomAdded }) => {
       return;
     }
 
+    if (!nightStayPrice) {
+      toast.error("Please enter the night stay price");
+      return;
+    }
+
     const invalidPackages = packages.some(
-      (pkg) => !pkg.checkIn || !pkg.checkOut || !pkg.price
+      (pkg) => !pkg.packageName || !pkg.checkInTime || !pkg.checkOutTime || !pkg.price
     );
     if (invalidPackages) {
-      toast.error("Please fill in all package fields");
+      toast.error("Please fill in all day-out package fields");
       return;
     }
 
@@ -102,6 +165,11 @@ const AddRoomModal = ({ isOpen, onClose, hotelId, onRoomAdded }) => {
       formData.append("roomType", roomType);
       formData.append("roomLabel", roomLabel);
       formData.append("bedTypes", JSON.stringify(bedTypes));
+      formData.append("nightStayPrice", nightStayPrice);
+      formData.append("nightStayAcType", nightStayAcType);
+      formData.append("defaultCheckInTime", defaultCheckInTime);
+      formData.append("defaultCheckOutTime", defaultCheckOutTime);
+      formData.append("amenities", JSON.stringify(selectedAmenities));
       formData.append(
         "packages",
         JSON.stringify(
@@ -110,11 +178,17 @@ const AddRoomModal = ({ isOpen, onClose, hotelId, onRoomAdded }) => {
       );
       images.forEach((file) => formData.append("images", file));
 
-      await axiosInstance.post("/rooms/add-room", formData, {
+      const res = await axiosInstance.post("/rooms/add-room", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
+      const createdRoom = res.data.room;
       toast.success("Room added successfully!");
+      addNotification(
+        "room_added",
+        `Room "${createdRoom.roomLabel}" added successfully`,
+        createdRoom
+      );
       resetForm();
       onRoomAdded();
       onClose();
@@ -199,11 +273,138 @@ const AddRoomModal = ({ isOpen, onClose, hotelId, onRoomAdded }) => {
             </div>
           </div>
 
-          {/* Packages */}
+          {/* Night Stay Section */}
+          <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+            <div className="flex items-center gap-2 mb-3">
+              <Clock className="h-4 w-4 text-blue-600" />
+              <h3 className="text-sm font-semibold text-blue-900">Night Stay (Per Night)</h3>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div>
+                <label className="block text-xs text-slate-500 mb-1">
+                  Price (LKR)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={nightStayPrice}
+                  onChange={(e) => setNightStayPrice(e.target.value)}
+                  placeholder="0"
+                  required
+                  className="w-full px-2 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-slate-500 mb-1">
+                  AC Type
+                </label>
+                <select
+                  value={nightStayAcType}
+                  onChange={(e) => setNightStayAcType(e.target.value)}
+                  className="w-full px-2 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="AC">AC</option>
+                  <option value="Non-AC">Non-AC</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs text-slate-500 mb-1">
+                  Check-in Time
+                </label>
+                <input
+                  type="time"
+                  value={defaultCheckInTime}
+                  onChange={(e) => setDefaultCheckInTime(e.target.value)}
+                  required
+                  className="w-full px-2 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-slate-500 mb-1">
+                  Check-out Time
+                </label>
+                <input
+                  type="time"
+                  value={defaultCheckOutTime}
+                  onChange={(e) => setDefaultCheckOutTime(e.target.value)}
+                  required
+                  className="w-full px-2 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Amenities */}
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <Coffee className="h-4 w-4 text-slate-600" />
+              <label className="block text-sm font-medium text-slate-700">
+                Room Amenities
+              </label>
+            </div>
+            <div className="flex flex-wrap gap-2 mb-3">
+              {PREDEFINED_AMENITIES.map((amenity) => (
+                <button
+                  key={amenity}
+                  type="button"
+                  onClick={() => toggleAmenity(amenity)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                    selectedAmenities.includes(amenity)
+                      ? "bg-blue-100 text-blue-800 border border-blue-300"
+                      : "bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200"
+                  }`}
+                >
+                  {amenity}
+                </button>
+              ))}
+            </div>
+            {/* Custom amenities that aren't in the predefined list */}
+            {selectedAmenities
+              .filter((a) => !PREDEFINED_AMENITIES.includes(a))
+              .map((amenity) => (
+                <span
+                  key={amenity}
+                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-300 mr-2 mb-2"
+                >
+                  {amenity}
+                  <button
+                    type="button"
+                    onClick={() => toggleAmenity(amenity)}
+                    className="hover:text-red-600"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              ))}
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={customAmenity}
+                onChange={(e) => setCustomAmenity(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    addCustomAmenity();
+                  }
+                }}
+                placeholder="Add custom amenity..."
+                className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+              <button
+                type="button"
+                onClick={addCustomAmenity}
+                className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm transition-colors"
+              >
+                Add
+              </button>
+            </div>
+          </div>
+
+          {/* Day-Out Packages (Optional) */}
           <div>
             <div className="flex items-center justify-between mb-2">
               <label className="block text-sm font-medium text-slate-700">
-                Packages
+                Day-Out Packages (Optional)
               </label>
               <button
                 type="button"
@@ -214,36 +415,56 @@ const AddRoomModal = ({ isOpen, onClose, hotelId, onRoomAdded }) => {
                 Add Package
               </button>
             </div>
+            {packages.length === 0 && (
+              <p className="text-xs text-slate-400 italic">
+                No day-out packages added. Click "Add Package" to create one.
+              </p>
+            )}
             <div className="space-y-3">
               {packages.map((pkg, index) => (
                 <div
                   key={index}
-                  className="p-4 bg-slate-50 rounded-lg border border-slate-200"
+                  className="p-4 bg-amber-50 rounded-lg border border-amber-200"
                 >
                   <div className="flex items-center justify-between mb-3">
-                    <span className="text-sm font-medium text-slate-600">
-                      Package {index + 1}
+                    <span className="text-sm font-medium text-amber-800">
+                      Day-Out Package {index + 1}
                     </span>
-                    {packages.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => removePackage(index)}
-                        className="p-1 text-red-500 hover:bg-red-50 rounded"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    )}
+                    <button
+                      type="button"
+                      onClick={() => removePackage(index)}
+                      className="p-1 text-red-500 hover:bg-red-50 rounded"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+                    <div className="sm:col-span-2">
+                      <label className="block text-xs text-slate-500 mb-1">
+                        Package Name
+                      </label>
+                      <input
+                        type="text"
+                        value={pkg.packageName}
+                        onChange={(e) =>
+                          handlePackageChange(index, "packageName", e.target.value)
+                        }
+                        placeholder="e.g. Day Out - Morning"
+                        required
+                        className="w-full px-2 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                    </div>
                   </div>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     <div>
                       <label className="block text-xs text-slate-500 mb-1">
-                        Check-in
+                        Check-in Time
                       </label>
                       <input
-                        type="date"
-                        value={pkg.checkIn}
+                        type="time"
+                        value={pkg.checkInTime}
                         onChange={(e) =>
-                          handlePackageChange(index, "checkIn", e.target.value)
+                          handlePackageChange(index, "checkInTime", e.target.value)
                         }
                         required
                         className="w-full px-2 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -251,13 +472,13 @@ const AddRoomModal = ({ isOpen, onClose, hotelId, onRoomAdded }) => {
                     </div>
                     <div>
                       <label className="block text-xs text-slate-500 mb-1">
-                        Check-out
+                        Check-out Time
                       </label>
                       <input
-                        type="date"
-                        value={pkg.checkOut}
+                        type="time"
+                        value={pkg.checkOutTime}
                         onChange={(e) =>
-                          handlePackageChange(index, "checkOut", e.target.value)
+                          handlePackageChange(index, "checkOutTime", e.target.value)
                         }
                         required
                         className="w-full px-2 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"

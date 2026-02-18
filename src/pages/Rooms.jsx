@@ -1,13 +1,15 @@
 import { useState, useEffect } from "react";
-import { BedDouble, Plus, Search, Filter, Trash2, Image } from "lucide-react";
+import { BedDouble, Plus, Search, Filter, Trash2, Image, Clock, Coffee } from "lucide-react";
 import axiosInstance from "../api/axiosInstance";
 import { toast } from "react-toastify";
 import AddRoomModal from "../components/AddRoomModal";
+import RoomDetailsModal from "../components/RoomDetailsModal";
 
 const Rooms = () => {
   const [rooms, setRooms] = useState([]);
   const [hotelId, setHotelId] = useState(null);
   const [showModal, setShowModal] = useState(false);
+  const [selectedRoom, setSelectedRoom] = useState(null);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState("all");
@@ -65,6 +67,15 @@ const Rooms = () => {
     { label: "Couple", value: coupleCount, color: "bg-orange-500" },
     { label: "Blocked", value: blockedCount, color: "bg-red-500" },
   ];
+
+  const formatTime = (time) => {
+    if (!time) return "";
+    const [h, m] = time.split(":");
+    const hour = parseInt(h);
+    const ampm = hour >= 12 ? "PM" : "AM";
+    const displayHour = hour % 12 || 12;
+    return `${displayHour}:${m} ${ampm}`;
+  };
 
   return (
     <div className="space-y-6">
@@ -170,7 +181,8 @@ const Rooms = () => {
           {filteredRooms.map((room) => (
             <div
               key={room._id}
-              className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden"
+              onClick={() => setSelectedRoom(room)}
+              className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden cursor-pointer hover:shadow-md transition-shadow duration-200"
             >
               {/* Room Image */}
               <div className="relative h-48 bg-slate-100">
@@ -185,7 +197,7 @@ const Rooms = () => {
                     <Image className="h-12 w-12 text-slate-300" />
                   </div>
                 )}
-                <div className="absolute top-3 left-3">
+                <div className="absolute top-3 left-3 flex gap-2">
                   <span
                     className={`px-2 py-1 rounded-full text-xs font-medium ${
                       room.roomType === "family"
@@ -195,6 +207,13 @@ const Rooms = () => {
                   >
                     {room.roomType.charAt(0).toUpperCase() +
                       room.roomType.slice(1)}
+                  </span>
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                    room.nightStayAcType === "AC"
+                      ? "bg-blue-100 text-blue-800"
+                      : "bg-slate-100 text-slate-800"
+                  }`}>
+                    {room.nightStayAcType}
                   </span>
                 </div>
                 {room.isManuallyBlocked && (
@@ -218,7 +237,7 @@ const Rooms = () => {
                     {room.roomLabel}
                   </h3>
                   <button
-                    onClick={() => handleDelete(room._id)}
+                    onClick={(e) => { e.stopPropagation(); handleDelete(room._id); }}
                     className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
                   >
                     <Trash2 className="h-4 w-4" />
@@ -241,26 +260,56 @@ const Rooms = () => {
                   </div>
                 )}
 
-                {/* Packages */}
+                {/* Night Stay Price & Times */}
+                <div className="pt-2 border-t border-slate-100">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="text-lg font-bold text-slate-900">
+                        LKR {room.nightStayPrice?.toLocaleString()}
+                      </span>
+                      <span className="text-sm text-slate-500 ml-1">/ night</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 mt-1 text-xs text-slate-500">
+                    <Clock className="h-3 w-3" />
+                    <span>
+                      {formatTime(room.defaultCheckInTime)} - {formatTime(room.defaultCheckOutTime)}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Day-Out Packages */}
                 {room.packages && room.packages.length > 0 && (
                   <div className="pt-2 border-t border-slate-100">
                     <p className="text-xs text-slate-500 mb-1">
-                      {room.packages.length} package
-                      {room.packages.length > 1 ? "s" : ""}
+                      {room.packages.length} day-out package{room.packages.length > 1 ? "s" : ""}
                     </p>
                     <div className="flex items-center gap-2">
-                      <span className="text-lg font-bold text-slate-900">
-                        LKR{" "}
+                      <span className="text-sm font-medium text-amber-700">
+                        From LKR{" "}
                         {Math.min(
                           ...room.packages.map((p) => p.price)
                         ).toLocaleString()}
                       </span>
-                      {room.packages.length > 1 && (
-                        <span className="text-sm text-slate-500">
-                          - LKR{" "}
-                          {Math.max(
-                            ...room.packages.map((p) => p.price)
-                          ).toLocaleString()}
+                    </div>
+                  </div>
+                )}
+
+                {/* Amenities */}
+                {room.amenities && room.amenities.length > 0 && (
+                  <div className="pt-2 border-t border-slate-100">
+                    <div className="flex flex-wrap gap-1">
+                      {room.amenities.slice(0, 4).map((amenity) => (
+                        <span
+                          key={amenity}
+                          className="px-2 py-0.5 bg-blue-50 text-blue-700 rounded text-xs"
+                        >
+                          {amenity}
+                        </span>
+                      ))}
+                      {room.amenities.length > 4 && (
+                        <span className="px-2 py-0.5 bg-slate-100 text-slate-500 rounded text-xs">
+                          +{room.amenities.length - 4} more
                         </span>
                       )}
                     </div>
@@ -279,6 +328,14 @@ const Rooms = () => {
         hotelId={hotelId}
         onRoomAdded={fetchData}
       />
+
+      {/* Room Details Modal */}
+      {selectedRoom && (
+        <RoomDetailsModal
+          room={selectedRoom}
+          onClose={() => setSelectedRoom(null)}
+        />
+      )}
     </div>
   );
 };
