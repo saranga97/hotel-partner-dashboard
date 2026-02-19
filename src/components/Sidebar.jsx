@@ -1,5 +1,6 @@
 import {
   LayoutDashboard,
+  Building2,
   BedDouble,
   CalendarDays,
   BarChart3,
@@ -16,6 +17,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
 
   const links = [
     { name: "Dashboard", icon: LayoutDashboard, path: "/" },
+    { name: "Hotel Profile", icon: Building2, path: "/hotel-profile" },
     { name: "Rooms", icon: BedDouble, path: "/rooms" },
     { name: "Bookings", icon: CalendarDays, path: "/bookings" },
     { name: "Analytics", icon: BarChart3, path: "/analytics" },

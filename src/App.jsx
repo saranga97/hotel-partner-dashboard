@@ -4,6 +4,7 @@ import Rooms from "./pages/Rooms";
 import Bookings from "./pages/Bookings";
 import Analytics from "./pages/Analytics";
 import Settings from "./pages/Settings";
+import HotelProfile from "./pages/HotelProfile";
 import Login from "./pages/Login";
 import PrivateRoute from "./components/PrivateRoute";
 import Layout from "./components/Layout";
@@ -21,6 +22,16 @@ function App() {
           <PrivateRoute>
             <Layout>
               <Dashboard />
+            </Layout>
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/hotel-profile"
+        element={
+          <PrivateRoute>
+            <Layout>
+              <HotelProfile />
             </Layout>
           </PrivateRoute>
         }
