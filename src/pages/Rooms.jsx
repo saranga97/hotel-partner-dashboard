@@ -48,10 +48,31 @@ const Rooms = () => {
     }
   };
 
+  const handleToggleBlock = async (e, room) => {
+    e.stopPropagation();
+    const endpoint = room.isManuallyBlocked
+      ? `/rooms/unblock/${room._id}`
+      : `/rooms/block/${room._id}`;
+    try {
+      await axiosInstance.put(endpoint);
+      setRooms((prev) =>
+        prev.map((r) =>
+          r._id === room._id
+            ? { ...r, isManuallyBlocked: !r.isManuallyBlocked }
+            : r
+        )
+      );
+      toast.success(room.isManuallyBlocked ? "Room unblocked" : "Room blocked");
+    } catch (err) {
+      toast.error("Failed to update room availability");
+    }
+  };
+
   const filteredRooms = rooms.filter((room) => {
-    const matchesSearch = room.roomLabel
-      .toLowerCase()
-      .includes(searchTerm.toLowerCase());
+    const term = searchTerm.toLowerCase();
+    const matchesSearch =
+      room.roomLabel?.toLowerCase().includes(term) ||
+      room.roomName?.toLowerCase().includes(term);
     const matchesType =
       filterType === "all" || room.roomType === filterType;
     return matchesSearch && matchesType;
@@ -128,7 +149,7 @@ const Rooms = () => {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
               <input
                 type="text"
-                placeholder="Search rooms by label..."
+                placeholder="Search rooms by name or label..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -233,15 +254,36 @@ const Rooms = () => {
               {/* Room Info */}
               <div className="p-4 space-y-3">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold text-slate-900">
-                    {room.roomLabel}
-                  </h3>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); handleDelete(room._id); }}
-                    className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
+                  <div>
+                    <h3 className="text-lg font-semibold text-slate-900">
+                      {room.roomName || room.roomLabel}
+                    </h3>
+                    {room.roomName && (
+                      <p className="text-xs text-slate-500">{room.roomLabel}</p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {/* Availability Toggle */}
+                    <button
+                      onClick={(e) => handleToggleBlock(e, room)}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                        room.isManuallyBlocked ? "bg-red-400" : "bg-green-500"
+                      }`}
+                      title={room.isManuallyBlocked ? "Click to unblock" : "Click to block"}
+                    >
+                      <span
+                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                          room.isManuallyBlocked ? "translate-x-1" : "translate-x-6"
+                        }`}
+                      />
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleDelete(room._id); }}
+                      className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
                 </div>
 
                 {/* Bed Types */}
@@ -334,6 +376,7 @@ const Rooms = () => {
         <RoomDetailsModal
           room={selectedRoom}
           onClose={() => setSelectedRoom(null)}
+          onRoomUpdated={fetchData}
         />
       )}
     </div>

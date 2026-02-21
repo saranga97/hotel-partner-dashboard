@@ -30,7 +30,9 @@ const PREDEFINED_AMENITIES = [
 
 const AddRoomModal = ({ isOpen, onClose, hotelId, onRoomAdded }) => {
   const { addNotification } = useNotifications();
+  const [roomName, setRoomName] = useState("");
   const [roomLabel, setRoomLabel] = useState("");
+  const [roomCount, setRoomCount] = useState(1);
   const [roomType, setRoomType] = useState("family");
   const [bedTypes, setBedTypes] = useState({
     single: 0,
@@ -117,7 +119,9 @@ const AddRoomModal = ({ isOpen, onClose, hotelId, onRoomAdded }) => {
   };
 
   const resetForm = () => {
+    setRoomName("");
     setRoomLabel("");
+    setRoomCount(1);
     setRoomType("family");
     setBedTypes({ single: 0, double: 0, queen: 0, king: 0 });
     setNightStayPrice("");
@@ -163,7 +167,12 @@ const AddRoomModal = ({ isOpen, onClose, hotelId, onRoomAdded }) => {
       const formData = new FormData();
       formData.append("hotelId", hotelId);
       formData.append("roomType", roomType);
-      formData.append("roomLabel", roomLabel);
+      formData.append("roomName", roomName);
+      if (roomCount > 1) {
+        formData.append("roomCount", roomCount);
+      } else {
+        formData.append("roomLabel", roomLabel);
+      }
       formData.append("bedTypes", JSON.stringify(bedTypes));
       formData.append("nightStayPrice", nightStayPrice);
       formData.append("nightStayAcType", nightStayAcType);
@@ -182,11 +191,14 @@ const AddRoomModal = ({ isOpen, onClose, hotelId, onRoomAdded }) => {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
-      const createdRoom = res.data.room;
-      toast.success("Room added successfully!");
+      const count = res.data.count || 1;
+      const createdRoom = res.data.room || (res.data.rooms && res.data.rooms[0]);
+      toast.success(count > 1 ? `${count} rooms added successfully!` : "Room added successfully!");
       addNotification(
         "room_added",
-        `Room "${createdRoom.roomLabel}" added successfully`,
+        count > 1
+          ? `${count} "${roomName}" rooms added successfully`
+          : `Room "${createdRoom?.roomLabel}" added successfully`,
         createdRoom
       );
       resetForm();
@@ -220,21 +232,59 @@ const AddRoomModal = ({ isOpen, onClose, hotelId, onRoomAdded }) => {
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
-          {/* Room Label & Type */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* Room Name */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">
+              Room Name
+            </label>
+            <input
+              type="text"
+              value={roomName}
+              onChange={(e) => setRoomName(e.target.value)}
+              placeholder="e.g. Double Deluxe Room, Deluxe Ocean View"
+              required
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+
+          {/* Room Count, Label & Type */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">
-                Room Label
+                Number of Rooms
               </label>
-              <input
-                type="text"
-                value={roomLabel}
-                onChange={(e) => setRoomLabel(e.target.value)}
-                placeholder="e.g. R-101"
-                required
+              <select
+                value={roomCount}
+                onChange={(e) => setRoomCount(parseInt(e.target.value))}
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
+              >
+                {[1, 2, 3, 5, 10, 15, 20, 25, 50, 100, 200, 500].map((n) => (
+                  <option key={n} value={n}>
+                    {n} {n === 1 ? "room" : "rooms"}
+                  </option>
+                ))}
+              </select>
+              {roomCount > 1 && (
+                <p className="text-xs text-slate-500 mt-1">
+                  Labels will be auto-generated
+                </p>
+              )}
             </div>
+            {roomCount === 1 && (
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Room Label
+                </label>
+                <input
+                  type="text"
+                  value={roomLabel}
+                  onChange={(e) => setRoomLabel(e.target.value)}
+                  placeholder="e.g. R-101"
+                  required
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+            )}
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">
                 Room Type
@@ -579,7 +629,9 @@ const AddRoomModal = ({ isOpen, onClose, hotelId, onRoomAdded }) => {
               disabled={loading}
               className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? "Adding Room..." : "Add Room"}
+              {loading
+                ? roomCount > 1 ? `Adding ${roomCount} Rooms...` : "Adding Room..."
+                : roomCount > 1 ? `Add ${roomCount} Rooms` : "Add Room"}
             </button>
           </div>
         </form>

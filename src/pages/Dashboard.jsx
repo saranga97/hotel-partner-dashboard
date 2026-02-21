@@ -193,8 +193,13 @@ const Dashboard = () => {
                     <div>
                       <p className="text-sm text-slate-700">
                         <span className="font-medium">
-                          {booking.room?.roomLabel || "Room"}
+                          {booking.room?.roomName || booking.room?.roomLabel || "Room"}
                         </span>
+                        {booking.room?.roomName && (
+                          <span className="text-slate-400 ml-1 text-xs">
+                            ({booking.room?.roomLabel})
+                          </span>
+                        )}
                         {" - "}
                         {booking.selectedPackage?.type === "night"
                           ? "Night Stay"

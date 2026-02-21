@@ -1,14 +1,18 @@
-import { createContext, useContext, useState, useEffect, useCallback } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
+import { io } from "socket.io-client";
+import axiosInstance from "../api/axiosInstance";
 
 const NotificationContext = createContext();
 
 const STORAGE_KEY = "ceylonstay_notifications";
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "http://localhost:5001";
 
 export const NotificationProvider = ({ children }) => {
   const [notifications, setNotifications] = useState(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
     return stored ? JSON.parse(stored) : [];
   });
+  const socketRef = useRef(null);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(notifications));
@@ -25,6 +29,46 @@ export const NotificationProvider = ({ children }) => {
     };
     setNotifications((prev) => [notification, ...prev]);
   }, []);
+
+  // Socket.IO connection
+  useEffect(() => {
+    const token = localStorage.getItem("ceylonstay_token");
+    if (!token) return;
+
+    const socket = io(SOCKET_URL, {
+      transports: ["websocket", "polling"],
+    });
+    socketRef.current = socket;
+
+    socket.on("connect", () => {
+      console.log("Socket connected:", socket.id);
+      // Fetch hotels and join rooms
+      axiosInstance
+        .get("/hotels/my-hotels")
+        .then((res) => {
+          res.data.forEach((hotel) => {
+            socket.emit("join_hotel", hotel._id);
+          });
+        })
+        .catch((err) => console.error("Failed to join hotel rooms:", err));
+    });
+
+    socket.on("new_booking", (booking) => {
+      const roomName = booking.room?.roomName || booking.room?.roomLabel || "Room";
+      const guestName = booking.user?.fullName || "A guest";
+      const price = booking.selectedPackage?.price?.toLocaleString() || "";
+      addNotification(
+        "new_booking",
+        `New booking: ${guestName} booked ${roomName} for ${booking.date} - LKR ${price}`,
+        booking
+      );
+    });
+
+    return () => {
+      socket.disconnect();
+      socketRef.current = null;
+    };
+  }, [addNotification]);
 
   const markAsRead = useCallback((id) => {
     setNotifications((prev) =>

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Menu, Bell, Search, BedDouble, Trash2 } from "lucide-react";
+import { Menu, Bell, Search, BedDouble, Calendar, Trash2 } from "lucide-react";
 import { useNotifications } from "../context/NotificationContext";
 
 const Topbar = ({ setSidebarOpen, onViewRoom }) => {
@@ -39,6 +39,20 @@ const Topbar = ({ setSidebarOpen, onViewRoom }) => {
       onViewRoom(notification.data);
       setShowNotifications(false);
     }
+    if (notification.type === "new_booking") {
+      setShowNotifications(false);
+    }
+  };
+
+  const getNotificationIcon = (type) => {
+    if (type === "new_booking") return Calendar;
+    return BedDouble;
+  };
+
+  const getNotificationColors = (type) => {
+    if (type === "new_booking") return "bg-blue-100 text-blue-600";
+    if (type === "room_added") return "bg-green-100 text-green-600";
+    return "bg-slate-100 text-slate-600";
   };
 
   return (
@@ -131,15 +145,16 @@ const Topbar = ({ setSidebarOpen, onViewRoom }) => {
                         }`}
                       >
                         <div className="flex items-start gap-3">
-                          <div
-                            className={`mt-0.5 p-1.5 rounded-lg ${
-                              notification.type === "room_added"
-                                ? "bg-green-100 text-green-600"
-                                : "bg-blue-100 text-blue-600"
-                            }`}
-                          >
-                            <BedDouble className="h-3.5 w-3.5" />
-                          </div>
+                          {(() => {
+                            const Icon = getNotificationIcon(notification.type);
+                            return (
+                              <div
+                                className={`mt-0.5 p-1.5 rounded-lg ${getNotificationColors(notification.type)}`}
+                              >
+                                <Icon className="h-3.5 w-3.5" />
+                              </div>
+                            );
+                          })()}
                           <div className="flex-1 min-w-0">
                             <p
                               className={`text-sm ${
