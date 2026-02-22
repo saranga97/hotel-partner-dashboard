@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
-import { BedDouble, Plus, Search, Filter, Trash2, Image, Clock, Coffee } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
+import { BedDouble, Plus, Search, Trash2, Image, Clock, Check, AlertCircle } from "lucide-react";
 import axiosInstance from "../api/axiosInstance";
-import { toast } from "react-toastify";
 import AddRoomModal from "../components/AddRoomModal";
 import RoomDetailsModal from "../components/RoomDetailsModal";
 
@@ -13,10 +13,27 @@ const Rooms = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState("all");
+  const [loadError, setLoadError] = useState("");
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Per-room inline feedback
+  const [roomFeedback, setRoomFeedback] = useState({}); // { [roomId]: { status, message } }
+
+  const showRoomFeedback = (roomId, status, message) => {
+    setRoomFeedback((prev) => ({ ...prev, [roomId]: { status, message } }));
+    setTimeout(() => {
+      setRoomFeedback((prev) => {
+        const next = { ...prev };
+        delete next[roomId];
+        return next;
+      });
+    }, 2500);
+  };
 
   const fetchData = async () => {
     try {
       setLoading(true);
+      setLoadError("");
       const [hotelsRes, roomsRes] = await Promise.all([
         axiosInstance.get("/hotels/my-hotels"),
         axiosInstance.get("/rooms/my-rooms"),
@@ -26,8 +43,8 @@ const Rooms = () => {
         setHotelId(hotelsRes.data[0]._id);
       }
       setRooms(roomsRes.data);
-    } catch (err) {
-      toast.error("Failed to load rooms");
+    } catch {
+      setLoadError("Failed to load rooms. Please refresh the page.");
     } finally {
       setLoading(false);
     }
@@ -37,14 +54,27 @@ const Rooms = () => {
     fetchData();
   }, []);
 
+  // Handle roomId URL param to auto-open modal
+  useEffect(() => {
+    const roomId = searchParams.get("roomId");
+    if (roomId && rooms.length > 0) {
+      const found = rooms.find((r) => r._id === roomId);
+      if (found) {
+        setSelectedRoom(found);
+        searchParams.delete("roomId");
+        setSearchParams(searchParams, { replace: true });
+      }
+    }
+  }, [rooms, searchParams]);
+
   const handleDelete = async (roomId) => {
     if (!window.confirm("Are you sure you want to delete this room?")) return;
     try {
       await axiosInstance.delete(`/rooms/delete-room/${roomId}`);
-      toast.success("Room deleted");
-      fetchData();
-    } catch (err) {
-      toast.error("Failed to delete room");
+      showRoomFeedback(roomId, "success", "Deleted");
+      setTimeout(() => fetchData(), 1000);
+    } catch {
+      showRoomFeedback(roomId, "error", "Failed to delete");
     }
   };
 
@@ -62,9 +92,9 @@ const Rooms = () => {
             : r
         )
       );
-      toast.success(room.isManuallyBlocked ? "Room unblocked" : "Room blocked");
-    } catch (err) {
-      toast.error("Failed to update room availability");
+      showRoomFeedback(room._id, "success", room.isManuallyBlocked ? "Unblocked" : "Blocked");
+    } catch {
+      showRoomFeedback(room._id, "error", "Failed");
     }
   };
 
@@ -170,6 +200,14 @@ const Rooms = () => {
         </div>
       </div>
 
+      {/* Load Error */}
+      {loadError && (
+        <div className="flex items-center gap-2 p-4 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
+          <AlertCircle className="h-4 w-4 flex-shrink-0" />
+          {loadError}
+        </div>
+      )}
+
       {/* Room List */}
       {loading ? (
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-12 text-center">
@@ -263,6 +301,23 @@ const Rooms = () => {
                     )}
                   </div>
                   <div className="flex items-center gap-2">
+                    {/* Inline feedback */}
+                    {roomFeedback[room._id] && (
+                      <span
+                        className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full ${
+                          roomFeedback[room._id].status === "success"
+                            ? "bg-green-100 text-green-700"
+                            : "bg-red-100 text-red-700"
+                        }`}
+                      >
+                        {roomFeedback[room._id].status === "success" ? (
+                          <Check className="h-3 w-3" />
+                        ) : (
+                          <AlertCircle className="h-3 w-3" />
+                        )}
+                        {roomFeedback[room._id].message}
+                      </span>
+                    )}
                     {/* Availability Toggle */}
                     <button
                       onClick={(e) => handleToggleBlock(e, room)}

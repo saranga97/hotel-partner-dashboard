@@ -59,7 +59,7 @@ export const NotificationProvider = ({ children }) => {
       const price = booking.selectedPackage?.price?.toLocaleString() || "";
       addNotification(
         "new_booking",
-        `New booking: ${guestName} booked ${roomName} for ${booking.date} - LKR ${price}`,
+        `New booking request: ${guestName} wants to book ${roomName} for ${booking.date} - LKR ${price}`,
         booking
       );
     });

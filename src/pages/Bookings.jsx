@@ -1,21 +1,26 @@
 import { useState, useEffect } from "react";
-import { Calendar, Search, Clock } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
+import { Calendar, Search, Clock, AlertCircle, Phone, User } from "lucide-react";
 import axiosInstance from "../api/axiosInstance";
-import { toast } from "react-toastify";
+import BookingDetailModal from "../components/BookingDetailModal";
 
 const Bookings = () => {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState({ total: 0, booked: 0, cancelled: 0 });
+  const [loadError, setLoadError] = useState("");
+  const [stats, setStats] = useState({ total: 0, pending: 0, booked: 0, cancelled: 0 });
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState("");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [selectedBooking, setSelectedBooking] = useState(null);
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const fetchBookings = async () => {
     try {
       setLoading(true);
+      setLoadError("");
       const params = new URLSearchParams();
       if (statusFilter !== "all") params.append("status", statusFilter);
       if (searchTerm) params.append("search", searchTerm);
@@ -29,12 +34,15 @@ const Bookings = () => {
       setBookings(res.data.bookings);
       setStats({
         total: res.data.total,
+        pending: res.data.pending,
         booked: res.data.booked,
         cancelled: res.data.cancelled,
       });
       setTotalPages(res.data.totalPages);
-    } catch (err) {
-      toast.error("Failed to load bookings");
+      return res.data.bookings;
+    } catch {
+      setLoadError("Failed to load bookings. Please refresh the page.");
+      return [];
     } finally {
       setLoading(false);
     }
@@ -43,6 +51,20 @@ const Bookings = () => {
   useEffect(() => {
     fetchBookings();
   }, [statusFilter, dateFilter, page]);
+
+  // Handle bookingId URL param to auto-open modal
+  useEffect(() => {
+    const bookingId = searchParams.get("bookingId");
+    if (bookingId && bookings.length > 0) {
+      const found = bookings.find((b) => b._id === bookingId);
+      if (found) {
+        setSelectedBooking(found);
+        // Clear the param after opening
+        searchParams.delete("bookingId");
+        setSearchParams(searchParams, { replace: true });
+      }
+    }
+  }, [bookings, searchParams]);
 
   // Debounce search
   useEffect(() => {
@@ -72,9 +94,31 @@ const Bookings = () => {
     return `${Math.floor(diff / 86400)}d ago`;
   };
 
+  const getStatusStyle = (status) => {
+    if (status === "pending") return "bg-amber-100 text-amber-800";
+    if (status === "booked") return "bg-green-100 text-green-800";
+    return "bg-red-100 text-red-800";
+  };
+
+  const getStatusLabel = (status) => {
+    if (status === "booked") return "approved";
+    return status;
+  };
+
+  const handleStatusChange = (updatedBooking) => {
+    setBookings((prev) =>
+      prev.map((b) =>
+        b._id === updatedBooking._id ? { ...b, status: updatedBooking.status } : b
+      )
+    );
+    // Refresh stats
+    fetchBookings();
+  };
+
   const bookingStats = [
     { label: "Total Bookings", value: stats.total, color: "bg-blue-500" },
-    { label: "Booked", value: stats.booked, color: "bg-green-500" },
+    { label: "Pending", value: stats.pending, color: "bg-amber-500" },
+    { label: "Approved", value: stats.booked, color: "bg-green-500" },
     { label: "Cancelled", value: stats.cancelled, color: "bg-red-500" },
   ];
 
@@ -91,7 +135,7 @@ const Bookings = () => {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {bookingStats.map((stat, index) => (
           <div
             key={index}
@@ -135,7 +179,8 @@ const Bookings = () => {
               className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="all">All Status</option>
-              <option value="booked">Booked</option>
+              <option value="pending">Pending</option>
+              <option value="booked">Approved</option>
               <option value="cancelled">Cancelled</option>
             </select>
             <input
@@ -159,6 +204,14 @@ const Bookings = () => {
         </div>
       </div>
 
+      {/* Load Error */}
+      {loadError && (
+        <div className="flex items-center gap-2 p-4 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
+          <AlertCircle className="h-4 w-4 flex-shrink-0" />
+          {loadError}
+        </div>
+      )}
+
       {/* Bookings List */}
       {loading ? (
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-12 text-center">
@@ -180,14 +233,16 @@ const Bookings = () => {
       ) : (
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
           {/* Table Header */}
-          <div className="hidden md:grid grid-cols-12 gap-4 px-6 py-3 bg-slate-50 border-b border-slate-200 text-xs font-medium text-slate-500 uppercase tracking-wider">
-            <div className="col-span-3">Room</div>
-            <div className="col-span-2">Guest</div>
-            <div className="col-span-2">Date</div>
+          <div className="hidden md:grid grid-cols-14 gap-3 px-6 py-3 bg-slate-50 border-b border-slate-200 text-xs font-medium text-slate-500 uppercase tracking-wider"
+               style={{ gridTemplateColumns: 'repeat(14, minmax(0, 1fr))' }}>
+            <div className="col-span-2">Room</div>
+            <div className="col-span-3">Guest</div>
+            <div className="col-span-2">Phone</div>
+            <div className="col-span-1">Date</div>
             <div className="col-span-2">Package</div>
             <div className="col-span-1">Price</div>
             <div className="col-span-1">Status</div>
-            <div className="col-span-1">Time</div>
+            <div className="col-span-2">Time</div>
           </div>
 
           {/* Table Rows */}
@@ -195,20 +250,26 @@ const Bookings = () => {
             {bookings.map((booking) => (
               <div
                 key={booking._id}
-                className="grid grid-cols-1 md:grid-cols-12 gap-2 md:gap-4 px-6 py-4 hover:bg-slate-50 transition-colors"
+                onClick={() => setSelectedBooking(booking)}
+                className={`grid grid-cols-1 md:grid-cols-14 gap-2 md:gap-3 px-6 py-3 hover:bg-slate-50 transition-colors cursor-pointer ${
+                  booking.status === "pending"
+                    ? "border-l-4 border-l-amber-400"
+                    : ""
+                }`}
+                style={{ gridTemplateColumns: 'repeat(14, minmax(0, 1fr))' }}
               >
                 {/* Room */}
-                <div className="col-span-3">
-                  <p className="text-sm font-medium text-slate-900">
+                <div className="col-span-2">
+                  <p className="text-xs font-medium text-slate-900">
                     {booking.room?.roomName || booking.room?.roomLabel || "N/A"}
                   </p>
                   {booking.room?.roomName && (
-                    <p className="text-xs text-slate-500">
+                    <p className="text-[11px] text-slate-500">
                       {booking.room?.roomLabel}
                     </p>
                   )}
                   <span
-                    className={`inline-block mt-0.5 px-1.5 py-0.5 rounded text-xs font-medium ${
+                    className={`inline-block mt-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium ${
                       booking.room?.roomType === "family"
                         ? "bg-green-50 text-green-700"
                         : "bg-purple-50 text-purple-700"
@@ -219,29 +280,50 @@ const Bookings = () => {
                 </div>
 
                 {/* Guest */}
-                <div className="col-span-2">
-                  <p className="text-sm text-slate-900">
-                    {booking.user?.fullName || "Guest"}
-                  </p>
-                  <p className="text-xs text-slate-500">
-                    {booking.user?.email}
+                <div className="col-span-3 flex items-center gap-2">
+                  {booking.user?.profileImage ? (
+                    <img
+                      src={booking.user.profileImage}
+                      alt={booking.user.fullName}
+                      className="w-7 h-7 rounded-full object-cover flex-shrink-0"
+                    />
+                  ) : (
+                    <div className="w-7 h-7 rounded-full bg-slate-200 flex items-center justify-center flex-shrink-0">
+                      <User className="h-3.5 w-3.5 text-slate-500" />
+                    </div>
+                  )}
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium text-slate-900 truncate">
+                      {booking.user?.fullName || "Guest"}
+                    </p>
+                    <p className="text-[11px] text-slate-500 truncate">
+                      {booking.user?.email}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Phone */}
+                <div className="col-span-2 flex items-center">
+                  <p className="text-xs text-slate-700 flex items-center gap-1">
+                    <Phone className="h-3 w-3 text-slate-400 flex-shrink-0" />
+                    {booking.user?.mobile || "N/A"}
                   </p>
                 </div>
 
                 {/* Date */}
-                <div className="col-span-2">
-                  <p className="text-sm text-slate-700">{booking.date}</p>
+                <div className="col-span-1 flex items-center">
+                  <p className="text-xs text-slate-700">{booking.date}</p>
                 </div>
 
                 {/* Package */}
-                <div className="col-span-2">
-                  <p className="text-sm text-slate-700">
+                <div className="col-span-2 flex flex-col justify-center">
+                  <p className="text-xs text-slate-700">
                     {booking.selectedPackage?.type === "night"
                       ? "Night Stay"
                       : booking.selectedPackage?.packageName || "Day Out"}
                   </p>
                   {booking.selectedPackage?.checkInTime && (
-                    <p className="text-xs text-slate-500 flex items-center gap-1">
+                    <p className="text-[11px] text-slate-500 flex items-center gap-1">
                       <Clock className="h-3 w-3" />
                       {formatTime(booking.selectedPackage.checkInTime)} -{" "}
                       {formatTime(booking.selectedPackage.checkOutTime)}
@@ -250,29 +332,25 @@ const Bookings = () => {
                 </div>
 
                 {/* Price */}
-                <div className="col-span-1">
-                  <p className="text-sm font-medium text-slate-900">
+                <div className="col-span-1 flex items-center">
+                  <p className="text-xs font-medium text-slate-900">
                     LKR{" "}
                     {booking.selectedPackage?.price?.toLocaleString()}
                   </p>
                 </div>
 
                 {/* Status */}
-                <div className="col-span-1">
+                <div className="col-span-1 flex items-center">
                   <span
-                    className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
-                      booking.status === "booked"
-                        ? "bg-green-100 text-green-800"
-                        : "bg-red-100 text-red-800"
-                    }`}
+                    className={`inline-flex px-2 py-0.5 rounded-full text-[11px] font-medium ${getStatusStyle(booking.status)}`}
                   >
-                    {booking.status}
+                    {getStatusLabel(booking.status)}
                   </span>
                 </div>
 
                 {/* Time */}
-                <div className="col-span-1">
-                  <p className="text-xs text-slate-400">
+                <div className="col-span-2 flex items-center">
+                  <p className="text-[11px] text-slate-400">
                     {getRelativeTime(booking.createdAt)}
                   </p>
                 </div>
@@ -305,6 +383,15 @@ const Bookings = () => {
             </div>
           )}
         </div>
+      )}
+
+      {/* Booking Detail Modal */}
+      {selectedBooking && (
+        <BookingDetailModal
+          booking={selectedBooking}
+          onClose={() => setSelectedBooking(null)}
+          onStatusChange={handleStatusChange}
+        />
       )}
     </div>
   );

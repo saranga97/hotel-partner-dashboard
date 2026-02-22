@@ -10,14 +10,47 @@ import {
   Image,
   Pencil,
   Save,
+  Plus,
+  Trash2,
+  Coffee,
+  Check,
+  AlertCircle,
+  XCircle,
 } from "lucide-react";
 import axiosInstance from "../api/axiosInstance";
-import { toast } from "react-toastify";
+import { useNotifications } from "../context/NotificationContext";
+
+const PREDEFINED_AMENITIES = [
+  "TV",
+  "Smart TV",
+  "Smart TV with Netflix",
+  "Smoking Allowed",
+  "No Smoking",
+  "Tea/Coffee Maker",
+  "WiFi",
+  "Breakfast Included",
+  "Attached Bathroom",
+  "Upper Floor",
+  "Ground Floor",
+  "Clothes Rack",
+  "Electric Kettle",
+  "Telephone",
+  "Iron",
+  "Hairdryer",
+  "Desk",
+  "Sitting Area",
+  "Towels",
+  "Bathtub",
+  "Refrigerator",
+];
 
 const RoomDetailsModal = ({ room, onClose, onRoomUpdated }) => {
+  const { addNotification } = useNotifications();
   const [currentImage, setCurrentImage] = useState(0);
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [saveStatus, setSaveStatus] = useState(null); // null | 'success' | 'error'
+  const [saveMessage, setSaveMessage] = useState("");
 
   // Editable fields
   const [editData, setEditData] = useState({
@@ -30,6 +63,29 @@ const RoomDetailsModal = ({ room, onClose, onRoomUpdated }) => {
     defaultCheckOutTime: room?.defaultCheckOutTime || "12:00",
     isManuallyBlocked: room?.isManuallyBlocked || false,
   });
+
+  // Editable bed types
+  const [bedTypes, setBedTypes] = useState({
+    single: room?.bedTypes?.single || 0,
+    double: room?.bedTypes?.double || 0,
+    queen: room?.bedTypes?.queen || 0,
+    king: room?.bedTypes?.king || 0,
+  });
+
+  // Editable amenities
+  const [selectedAmenities, setSelectedAmenities] = useState(
+    room?.amenities || []
+  );
+  const [customAmenity, setCustomAmenity] = useState("");
+
+  // Editable packages
+  const [packages, setPackages] = useState(
+    room?.packages?.map((pkg) => ({ ...pkg })) || []
+  );
+
+  // Block toggle feedback
+  const [blockStatus, setBlockStatus] = useState(null);
+  const [blockMessage, setBlockMessage] = useState("");
 
   if (!room) return null;
 
@@ -53,27 +109,85 @@ const RoomDetailsModal = ({ room, onClose, onRoomUpdated }) => {
     return `${displayHour}:${m} ${ampm}`;
   };
 
+  const showFeedback = (setter, msgSetter, status, message, duration = 2500) => {
+    setter(status);
+    msgSetter(message);
+    setTimeout(() => {
+      setter(null);
+      msgSetter("");
+    }, duration);
+  };
+
   const handleToggleBlock = async () => {
     const endpoint = editData.isManuallyBlocked
       ? `/rooms/unblock/${room._id}`
       : `/rooms/block/${room._id}`;
     try {
       await axiosInstance.put(endpoint);
+      const wasBlocked = editData.isManuallyBlocked;
       setEditData((prev) => ({
         ...prev,
         isManuallyBlocked: !prev.isManuallyBlocked,
       }));
-      toast.success(
-        editData.isManuallyBlocked ? "Room unblocked" : "Room blocked"
-      );
+      showFeedback(setBlockStatus, setBlockMessage, "success", wasBlocked ? "Room unblocked" : "Room blocked");
       if (onRoomUpdated) onRoomUpdated();
-    } catch (err) {
-      toast.error("Failed to update room availability");
+    } catch {
+      showFeedback(setBlockStatus, setBlockMessage, "error", "Failed to update availability");
     }
+  };
+
+  // Bed type handlers
+  const handleBedTypeChange = (type, value) => {
+    setBedTypes((prev) => ({
+      ...prev,
+      [type]: Math.max(0, parseInt(value) || 0),
+    }));
+  };
+
+  // Amenity handlers
+  const toggleAmenity = (amenity) => {
+    setSelectedAmenities((prev) =>
+      prev.includes(amenity)
+        ? prev.filter((a) => a !== amenity)
+        : [...prev, amenity]
+    );
+  };
+
+  const addCustomAmenity = () => {
+    const trimmed = customAmenity.trim();
+    if (trimmed && !selectedAmenities.includes(trimmed)) {
+      setSelectedAmenities((prev) => [...prev, trimmed]);
+      setCustomAmenity("");
+    }
+  };
+
+  // Package handlers
+  const handlePackageChange = (index, field, value) => {
+    setPackages((prev) =>
+      prev.map((pkg, i) => (i === index ? { ...pkg, [field]: value } : pkg))
+    );
+  };
+
+  const addPackage = () => {
+    setPackages((prev) => [
+      ...prev,
+      {
+        packageName: "",
+        checkInTime: "08:00",
+        checkOutTime: "17:00",
+        acType: "AC",
+        price: "",
+      },
+    ]);
+  };
+
+  const removePackage = (index) => {
+    setPackages((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleSave = async () => {
     setSaving(true);
+    setSaveStatus(null);
     try {
       const formData = new FormData();
       formData.append("roomName", editData.roomName);
@@ -83,20 +197,101 @@ const RoomDetailsModal = ({ room, onClose, onRoomUpdated }) => {
       formData.append("nightStayAcType", editData.nightStayAcType);
       formData.append("defaultCheckInTime", editData.defaultCheckInTime);
       formData.append("defaultCheckOutTime", editData.defaultCheckOutTime);
+      formData.append("bedTypes", JSON.stringify(bedTypes));
+      formData.append("amenities", JSON.stringify(selectedAmenities));
+      formData.append(
+        "packages",
+        JSON.stringify(
+          packages.map((pkg) => ({ ...pkg, price: Number(pkg.price) }))
+        )
+      );
 
       await axiosInstance.put(`/rooms/update-room/${room._id}`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
-      toast.success("Room updated successfully");
-      setIsEditing(false);
+      showFeedback(setSaveStatus, setSaveMessage, "success", "Saved successfully");
+      setTimeout(() => setIsEditing(false), 1500);
+      addNotification(
+        "room_updated",
+        `Room updated: ${editData.roomName || room.roomLabel} has been modified`,
+        { _id: room._id, ...editData }
+      );
       if (onRoomUpdated) onRoomUpdated();
     } catch (err) {
-      toast.error(
+      showFeedback(
+        setSaveStatus,
+        setSaveMessage,
+        "error",
         err.response?.data?.message || "Failed to update room"
       );
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleCancel = () => {
+    // Reset all editable state back to original room values
+    setEditData({
+      roomName: room?.roomName || "",
+      roomLabel: room?.roomLabel || "",
+      roomType: room?.roomType || "family",
+      nightStayPrice: room?.nightStayPrice || 0,
+      nightStayAcType: room?.nightStayAcType || "AC",
+      defaultCheckInTime: room?.defaultCheckInTime || "14:00",
+      defaultCheckOutTime: room?.defaultCheckOutTime || "12:00",
+      isManuallyBlocked: room?.isManuallyBlocked || false,
+    });
+    setBedTypes({
+      single: room?.bedTypes?.single || 0,
+      double: room?.bedTypes?.double || 0,
+      queen: room?.bedTypes?.queen || 0,
+      king: room?.bedTypes?.king || 0,
+    });
+    setSelectedAmenities(room?.amenities || []);
+    setCustomAmenity("");
+    setPackages(room?.packages?.map((pkg) => ({ ...pkg })) || []);
+    setSaveStatus(null);
+    setSaveMessage("");
+    setIsEditing(false);
+  };
+
+  const getSaveButtonContent = () => {
+    if (saving) {
+      return (
+        <>
+          <div className="h-3.5 w-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+          Saving...
+        </>
+      );
+    }
+    if (saveStatus === "success") {
+      return (
+        <>
+          <Check className="h-3.5 w-3.5" />
+          {saveMessage}
+        </>
+      );
+    }
+    if (saveStatus === "error") {
+      return (
+        <>
+          <AlertCircle className="h-3.5 w-3.5" />
+          {saveMessage}
+        </>
+      );
+    }
+    return (
+      <>
+        <Save className="h-3.5 w-3.5" />
+        Save
+      </>
+    );
+  };
+
+  const getSaveButtonStyle = () => {
+    if (saveStatus === "success") return "bg-green-600 hover:bg-green-700";
+    if (saveStatus === "error") return "bg-red-600 hover:bg-red-700";
+    return "bg-blue-600 hover:bg-blue-700";
   };
 
   return (
@@ -105,11 +300,11 @@ const RoomDetailsModal = ({ room, onClose, onRoomUpdated }) => {
         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
         onClick={onClose}
       />
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[85vh] overflow-hidden mx-4">
-        <div className="flex flex-col md:flex-row max-h-[85vh]">
+      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-hidden mx-4">
+        <div className="flex flex-col md:flex-row max-h-[90vh]">
           {/* Left: Image Gallery */}
-          <div className="md:w-1/2 relative bg-slate-100">
-            {/* Close button - positioned on image side */}
+          <div className="md:w-5/12 relative bg-slate-100">
+            {/* Close button */}
             <button
               onClick={onClose}
               className="absolute top-3 left-3 z-20 p-2 bg-white/90 hover:bg-white rounded-full shadow-md transition-colors"
@@ -182,7 +377,7 @@ const RoomDetailsModal = ({ room, onClose, onRoomUpdated }) => {
           </div>
 
           {/* Right: Room Details */}
-          <div className="md:w-1/2 overflow-y-auto p-6 space-y-5">
+          <div className="md:w-7/12 overflow-y-auto p-8 space-y-6">
             {/* Header */}
             <div>
               <div className="flex items-center justify-between mb-2">
@@ -201,16 +396,29 @@ const RoomDetailsModal = ({ room, onClose, onRoomUpdated }) => {
                       {editData.roomName || room.roomLabel}
                     </h2>
                   )}
-                  <span
-                    className={`px-2.5 py-1 rounded-full text-xs font-medium ${
-                      room.roomType === "family"
-                        ? "bg-green-100 text-green-800"
-                        : "bg-purple-100 text-purple-800"
-                    }`}
-                  >
-                    {room.roomType?.charAt(0).toUpperCase() +
-                      room.roomType?.slice(1)}
-                  </span>
+                  {isEditing ? (
+                    <select
+                      value={editData.roomType}
+                      onChange={(e) =>
+                        setEditData((d) => ({ ...d, roomType: e.target.value }))
+                      }
+                      className="px-2.5 py-1 rounded-full text-xs font-medium border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="family">Family</option>
+                      <option value="couple">Couple</option>
+                    </select>
+                  ) : (
+                    <span
+                      className={`px-2.5 py-1 rounded-full text-xs font-medium ${
+                        editData.roomType === "family"
+                          ? "bg-green-100 text-green-800"
+                          : "bg-purple-100 text-purple-800"
+                      }`}
+                    >
+                      {editData.roomType?.charAt(0).toUpperCase() +
+                        editData.roomType?.slice(1)}
+                    </span>
+                  )}
                 </div>
                 {!isEditing ? (
                   <button
@@ -221,14 +429,23 @@ const RoomDetailsModal = ({ room, onClose, onRoomUpdated }) => {
                     <Pencil className="h-4 w-4" />
                   </button>
                 ) : (
-                  <button
-                    onClick={handleSave}
-                    disabled={saving}
-                    className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
-                  >
-                    <Save className="h-3.5 w-3.5" />
-                    {saving ? "Saving..." : "Save"}
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={handleCancel}
+                      disabled={saving}
+                      className="inline-flex items-center gap-1 px-3 py-1.5 border border-slate-300 text-slate-700 hover:bg-slate-50 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+                    >
+                      <XCircle className="h-3.5 w-3.5" />
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleSave}
+                      disabled={saving}
+                      className={`inline-flex items-center gap-1 px-3 py-1.5 text-white rounded-lg text-sm font-medium transition-all disabled:opacity-50 ${getSaveButtonStyle()}`}
+                    >
+                      {getSaveButtonContent()}
+                    </button>
+                  </div>
                 )}
               </div>
               {editData.roomName && (
@@ -254,6 +471,22 @@ const RoomDetailsModal = ({ room, onClose, onRoomUpdated }) => {
                     ? "Room is blocked"
                     : "Room is available"}
                 </span>
+                {blockStatus && (
+                  <span
+                    className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full ${
+                      blockStatus === "success"
+                        ? "bg-green-100 text-green-700"
+                        : "bg-red-100 text-red-700"
+                    }`}
+                  >
+                    {blockStatus === "success" ? (
+                      <Check className="h-3 w-3" />
+                    ) : (
+                      <AlertCircle className="h-3 w-3" />
+                    )}
+                    {blockMessage}
+                  </span>
+                )}
               </div>
               <button
                 onClick={handleToggleBlock}
@@ -374,16 +607,37 @@ const RoomDetailsModal = ({ room, onClose, onRoomUpdated }) => {
             </div>
 
             {/* Bed Types */}
-            {room.bedTypes && (
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <BedDouble className="h-4 w-4 text-slate-600" />
-                  <h3 className="text-sm font-semibold text-slate-700">
-                    Bed Types
-                  </h3>
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <BedDouble className="h-4 w-4 text-slate-600" />
+                <h3 className="text-sm font-semibold text-slate-700">
+                  Bed Types
+                </h3>
+              </div>
+              {isEditing ? (
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {Object.entries(bedTypes)
+                    .filter(([key]) => key !== "_id")
+                    .map(([type, count]) => (
+                      <div key={type}>
+                        <label className="block text-xs text-slate-500 mb-1 capitalize">
+                          {type}
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={count}
+                          onChange={(e) =>
+                            handleBedTypeChange(type, e.target.value)
+                          }
+                          className="w-full px-2 py-1.5 border border-slate-300 rounded-lg text-sm text-center"
+                        />
+                      </div>
+                    ))}
                 </div>
+              ) : (
                 <div className="flex flex-wrap gap-2">
-                  {Object.entries(room.bedTypes)
+                  {Object.entries(bedTypes)
                     .filter(([key, count]) => count > 0 && key !== "_id")
                     .map(([type, count]) => (
                       <span
@@ -393,18 +647,87 @@ const RoomDetailsModal = ({ room, onClose, onRoomUpdated }) => {
                         {count} {type.charAt(0).toUpperCase() + type.slice(1)}
                       </span>
                     ))}
+                  {Object.entries(bedTypes).filter(
+                    ([key, count]) => count > 0 && key !== "_id"
+                  ).length === 0 && (
+                    <span className="text-sm text-slate-400 italic">
+                      No bed types specified
+                    </span>
+                  )}
                 </div>
-              </div>
-            )}
+              )}
+            </div>
 
             {/* Amenities */}
-            {room.amenities && room.amenities.length > 0 && (
-              <div>
-                <h3 className="text-sm font-semibold text-slate-700 mb-2">
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <Coffee className="h-4 w-4 text-slate-600" />
+                <h3 className="text-sm font-semibold text-slate-700">
                   Amenities
                 </h3>
+              </div>
+              {isEditing ? (
+                <div>
+                  <div className="flex flex-wrap gap-1.5 mb-2">
+                    {PREDEFINED_AMENITIES.map((amenity) => (
+                      <button
+                        key={amenity}
+                        type="button"
+                        onClick={() => toggleAmenity(amenity)}
+                        className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
+                          selectedAmenities.includes(amenity)
+                            ? "bg-blue-100 text-blue-800 border border-blue-300"
+                            : "bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200"
+                        }`}
+                      >
+                        {amenity}
+                      </button>
+                    ))}
+                  </div>
+                  {/* Custom amenities */}
+                  {selectedAmenities
+                    .filter((a) => !PREDEFINED_AMENITIES.includes(a))
+                    .map((amenity) => (
+                      <span
+                        key={amenity}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-300 mr-1.5 mb-1.5"
+                      >
+                        {amenity}
+                        <button
+                          type="button"
+                          onClick={() => toggleAmenity(amenity)}
+                          className="hover:text-red-600"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </span>
+                    ))}
+                  <div className="flex gap-2 mt-2">
+                    <input
+                      type="text"
+                      value={customAmenity}
+                      onChange={(e) => setCustomAmenity(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          addCustomAmenity();
+                        }
+                      }}
+                      placeholder="Add custom amenity..."
+                      className="flex-1 px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                    <button
+                      type="button"
+                      onClick={addCustomAmenity}
+                      className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs transition-colors"
+                    >
+                      Add
+                    </button>
+                  </div>
+                </div>
+              ) : selectedAmenities.length > 0 ? (
                 <div className="flex flex-wrap gap-2">
-                  {room.amenities.map((amenity) => (
+                  {selectedAmenities.map((amenity) => (
                     <span
                       key={amenity}
                       className="px-3 py-1.5 bg-blue-50 text-blue-700 rounded-lg text-xs font-medium"
@@ -413,20 +736,155 @@ const RoomDetailsModal = ({ room, onClose, onRoomUpdated }) => {
                     </span>
                   ))}
                 </div>
-              </div>
-            )}
+              ) : (
+                <span className="text-sm text-slate-400 italic">
+                  No amenities specified
+                </span>
+              )}
+            </div>
 
             {/* Day-Out Packages */}
-            {room.packages && room.packages.length > 0 && (
-              <div>
-                <div className="flex items-center gap-2 mb-2">
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
                   <Tag className="h-4 w-4 text-amber-600" />
                   <h3 className="text-sm font-semibold text-slate-700">
                     Day-Out Packages
                   </h3>
                 </div>
+                {isEditing && (
+                  <button
+                    type="button"
+                    onClick={addPackage}
+                    className="inline-flex items-center text-xs text-blue-600 hover:text-blue-700 font-medium"
+                  >
+                    <Plus className="h-3.5 w-3.5 mr-0.5" />
+                    Add Package
+                  </button>
+                )}
+              </div>
+              {isEditing ? (
+                <div className="space-y-3">
+                  {packages.length === 0 && (
+                    <p className="text-xs text-slate-400 italic">
+                      No day-out packages. Click "Add Package" to create one.
+                    </p>
+                  )}
+                  {packages.map((pkg, index) => (
+                    <div
+                      key={index}
+                      className="p-3 bg-amber-50 rounded-lg border border-amber-200"
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-medium text-amber-800">
+                          Package {index + 1}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => removePackage(index)}
+                          className="p-1 text-red-500 hover:bg-red-50 rounded"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                      <div className="mb-2">
+                        <label className="block text-xs text-slate-500 mb-1">
+                          Package Name
+                        </label>
+                        <input
+                          type="text"
+                          value={pkg.packageName}
+                          onChange={(e) =>
+                            handlePackageChange(
+                              index,
+                              "packageName",
+                              e.target.value
+                            )
+                          }
+                          placeholder="e.g. Day Out - Morning"
+                          className="w-full px-2 py-1.5 border border-slate-300 rounded-lg text-sm"
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="block text-xs text-slate-500 mb-1">
+                            Check-in
+                          </label>
+                          <input
+                            type="time"
+                            value={pkg.checkInTime}
+                            onChange={(e) =>
+                              handlePackageChange(
+                                index,
+                                "checkInTime",
+                                e.target.value
+                              )
+                            }
+                            className="w-full px-2 py-1.5 border border-slate-300 rounded-lg text-sm"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-slate-500 mb-1">
+                            Check-out
+                          </label>
+                          <input
+                            type="time"
+                            value={pkg.checkOutTime}
+                            onChange={(e) =>
+                              handlePackageChange(
+                                index,
+                                "checkOutTime",
+                                e.target.value
+                              )
+                            }
+                            className="w-full px-2 py-1.5 border border-slate-300 rounded-lg text-sm"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-slate-500 mb-1">
+                            AC Type
+                          </label>
+                          <select
+                            value={pkg.acType}
+                            onChange={(e) =>
+                              handlePackageChange(
+                                index,
+                                "acType",
+                                e.target.value
+                              )
+                            }
+                            className="w-full px-2 py-1.5 border border-slate-300 rounded-lg text-sm"
+                          >
+                            <option value="AC">AC</option>
+                            <option value="Non-AC">Non-AC</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-xs text-slate-500 mb-1">
+                            Price (LKR)
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            value={pkg.price}
+                            onChange={(e) =>
+                              handlePackageChange(
+                                index,
+                                "price",
+                                e.target.value
+                              )
+                            }
+                            placeholder="0"
+                            className="w-full px-2 py-1.5 border border-slate-300 rounded-lg text-sm"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : packages.length > 0 ? (
                 <div className="space-y-2">
-                  {room.packages.map((pkg, idx) => (
+                  {packages.map((pkg, idx) => (
                     <div
                       key={idx}
                       className="p-3 bg-amber-50 rounded-lg border border-amber-100"
@@ -451,8 +909,12 @@ const RoomDetailsModal = ({ room, onClose, onRoomUpdated }) => {
                     </div>
                   ))}
                 </div>
-              </div>
-            )}
+              ) : (
+                <span className="text-sm text-slate-400 italic">
+                  No day-out packages
+                </span>
+              )}
+            </div>
           </div>
         </div>
       </div>

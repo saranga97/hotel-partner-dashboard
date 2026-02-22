@@ -1,7 +1,6 @@
 import { useState } from "react";
-import { X, Plus, Trash2, Upload, Image, Clock, Coffee } from "lucide-react";
+import { X, Plus, Trash2, Upload, Image, Clock, Coffee, Check, AlertCircle } from "lucide-react";
 import axiosInstance from "../api/axiosInstance";
-import { toast } from "react-toastify";
 import { useNotifications } from "../context/NotificationContext";
 
 const PREDEFINED_AMENITIES = [
@@ -58,6 +57,11 @@ const AddRoomModal = ({ isOpen, onClose, hotelId, onRoomAdded }) => {
   const [previews, setPreviews] = useState([]);
   const [loading, setLoading] = useState(false);
 
+  // Inline feedback state
+  const [submitStatus, setSubmitStatus] = useState(null); // null | 'success' | 'error'
+  const [submitMessage, setSubmitMessage] = useState("");
+  const [validationError, setValidationError] = useState("");
+
   const handleBedTypeChange = (type, value) => {
     setBedTypes((prev) => ({
       ...prev,
@@ -103,7 +107,8 @@ const AddRoomModal = ({ isOpen, onClose, hotelId, onRoomAdded }) => {
     const totalImages = images.length + files.length;
 
     if (totalImages > 7) {
-      toast.error("Maximum 7 images allowed");
+      setValidationError("Maximum 7 images allowed");
+      setTimeout(() => setValidationError(""), 3000);
       return;
     }
 
@@ -134,23 +139,28 @@ const AddRoomModal = ({ isOpen, onClose, hotelId, onRoomAdded }) => {
     previews.forEach((p) => URL.revokeObjectURL(p));
     setImages([]);
     setPreviews([]);
+    setValidationError("");
+    setSubmitStatus(null);
+    setSubmitMessage("");
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setValidationError("");
+    setSubmitStatus(null);
 
     if (!hotelId) {
-      toast.error("Hotel not found. Please try again.");
+      setValidationError("Hotel not found. Please try again.");
       return;
     }
 
     if (images.length < 3) {
-      toast.error("Please upload at least 3 images");
+      setValidationError("Please upload at least 3 images");
       return;
     }
 
     if (!nightStayPrice) {
-      toast.error("Please enter the night stay price");
+      setValidationError("Please enter the night stay price");
       return;
     }
 
@@ -158,7 +168,7 @@ const AddRoomModal = ({ isOpen, onClose, hotelId, onRoomAdded }) => {
       (pkg) => !pkg.packageName || !pkg.checkInTime || !pkg.checkOutTime || !pkg.price
     );
     if (invalidPackages) {
-      toast.error("Please fill in all day-out package fields");
+      setValidationError("Please fill in all day-out package fields");
       return;
     }
 
@@ -193,7 +203,10 @@ const AddRoomModal = ({ isOpen, onClose, hotelId, onRoomAdded }) => {
 
       const count = res.data.count || 1;
       const createdRoom = res.data.room || (res.data.rooms && res.data.rooms[0]);
-      toast.success(count > 1 ? `${count} rooms added successfully!` : "Room added successfully!");
+
+      setSubmitStatus("success");
+      setSubmitMessage(count > 1 ? `${count} rooms added!` : "Room added!");
+
       addNotification(
         "room_added",
         count > 1
@@ -201,17 +214,59 @@ const AddRoomModal = ({ isOpen, onClose, hotelId, onRoomAdded }) => {
           : `Room "${createdRoom?.roomLabel}" added successfully`,
         createdRoom
       );
-      resetForm();
-      onRoomAdded();
-      onClose();
+
+      setTimeout(() => {
+        resetForm();
+        onRoomAdded();
+        onClose();
+      }, 1200);
     } catch (err) {
-      toast.error(err.response?.data?.message || err.response?.data?.error || "Failed to add room");
+      setSubmitStatus("error");
+      setSubmitMessage(err.response?.data?.message || err.response?.data?.error || "Failed to add room");
+      setTimeout(() => {
+        setSubmitStatus(null);
+        setSubmitMessage("");
+      }, 3000);
     } finally {
       setLoading(false);
     }
   };
 
   if (!isOpen) return null;
+
+  const getSubmitButtonContent = () => {
+    if (loading) {
+      return (
+        <>
+          <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+          {roomCount > 1 ? `Adding ${roomCount} Rooms...` : "Adding Room..."}
+        </>
+      );
+    }
+    if (submitStatus === "success") {
+      return (
+        <>
+          <Check className="h-4 w-4" />
+          {submitMessage}
+        </>
+      );
+    }
+    if (submitStatus === "error") {
+      return (
+        <>
+          <AlertCircle className="h-4 w-4" />
+          {submitMessage}
+        </>
+      );
+    }
+    return roomCount > 1 ? `Add ${roomCount} Rooms` : "Add Room";
+  };
+
+  const getSubmitButtonStyle = () => {
+    if (submitStatus === "success") return "bg-green-600 hover:bg-green-700";
+    if (submitStatus === "error") return "bg-red-600 hover:bg-red-700";
+    return "bg-blue-600 hover:bg-blue-700";
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -232,6 +287,14 @@ const AddRoomModal = ({ isOpen, onClose, hotelId, onRoomAdded }) => {
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
+          {/* Validation Error Banner */}
+          {validationError && (
+            <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+              <AlertCircle className="h-4 w-4 flex-shrink-0" />
+              {validationError}
+            </div>
+          )}
+
           {/* Room Name */}
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">
@@ -626,12 +689,10 @@ const AddRoomModal = ({ isOpen, onClose, hotelId, onRoomAdded }) => {
             </button>
             <button
               type="submit"
-              disabled={loading}
-              className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={loading || submitStatus === "success"}
+              className={`inline-flex items-center gap-2 px-6 py-2 text-white rounded-lg text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed ${getSubmitButtonStyle()}`}
             >
-              {loading
-                ? roomCount > 1 ? `Adding ${roomCount} Rooms...` : "Adding Room..."
-                : roomCount > 1 ? `Add ${roomCount} Rooms` : "Add Room"}
+              {getSubmitButtonContent()}
             </button>
           </div>
         </form>

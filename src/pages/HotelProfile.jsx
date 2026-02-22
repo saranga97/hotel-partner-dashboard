@@ -1,10 +1,9 @@
 import { useState, useEffect } from "react";
 import axiosInstance from "../api/axiosInstance";
-import { toast } from "react-toastify";
 import LocationPicker from "../components/LocationPicker";
 import {
   Building2, Image, MapPin, Phone, Coffee, HelpCircle, Shield,
-  Upload, X, Plus, Trash2, Save, Loader2,
+  Upload, X, Plus, Trash2, Save, Loader2, Check, AlertCircle,
 } from "lucide-react";
 
 const TABS = [
@@ -42,6 +41,11 @@ const HotelProfile = () => {
   const [activeTab, setActiveTab] = useState("overview");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [loadError, setLoadError] = useState("");
+
+  // Save feedback state
+  const [saveStatus, setSaveStatus] = useState(null); // null | 'success' | 'error' | 'info'
+  const [saveMessage, setSaveMessage] = useState("");
 
   // Overview state
   const [name, setName] = useState("");
@@ -51,6 +55,7 @@ const HotelProfile = () => {
   const [existingImages, setExistingImages] = useState([]);
   const [newImages, setNewImages] = useState([]);
   const [newPreviews, setNewPreviews] = useState([]);
+  const [imageError, setImageError] = useState("");
 
   // Location state
   const [address, setAddress] = useState("");
@@ -77,6 +82,15 @@ const HotelProfile = () => {
     fetchHotel();
   }, []);
 
+  const showSaveFeedback = (status, message, duration = 2500) => {
+    setSaveStatus(status);
+    setSaveMessage(message);
+    setTimeout(() => {
+      setSaveStatus(null);
+      setSaveMessage("");
+    }, duration);
+  };
+
   const fetchHotel = async () => {
     try {
       const res = await axiosInstance.get("/hotels/my-hotels");
@@ -85,8 +99,8 @@ const HotelProfile = () => {
         setHotel(h);
         populateState(h);
       }
-    } catch (err) {
-      toast.error("Failed to load hotel data");
+    } catch {
+      setLoadError("Failed to load hotel data");
     } finally {
       setLoading(false);
     }
@@ -110,6 +124,7 @@ const HotelProfile = () => {
   const saveSection = async (data) => {
     if (!hotel) return;
     setSaving(true);
+    setSaveStatus(null);
     try {
       const res = await axiosInstance.put(
         `/hotels/update-hotel/${hotel._id}`,
@@ -119,9 +134,9 @@ const HotelProfile = () => {
           : {}
       );
       setHotel(res.data.hotel);
-      toast.success("Saved successfully!");
+      showSaveFeedback("success", "Saved successfully!");
     } catch (err) {
-      toast.error(err.response?.data?.message || "Failed to save");
+      showSaveFeedback("error", err.response?.data?.message || "Failed to save");
     } finally {
       setSaving(false);
     }
@@ -133,7 +148,7 @@ const HotelProfile = () => {
 
   const handleSaveGallery = () => {
     if (newImages.length === 0 && existingImages.length > 0) {
-      toast.info("No new images to upload");
+      showSaveFeedback("info", "No new images to upload");
       return;
     }
     const formData = new FormData();
@@ -179,7 +194,8 @@ const HotelProfile = () => {
     const files = Array.from(e.target.files);
     const total = existingImages.length + newImages.length + files.length;
     if (total > 10) {
-      toast.error("Maximum 10 images allowed");
+      setImageError("Maximum 10 images allowed");
+      setTimeout(() => setImageError(""), 3000);
       return;
     }
     const previews = files.map((f) => URL.createObjectURL(f));
@@ -253,6 +269,15 @@ const HotelProfile = () => {
     );
   }
 
+  if (loadError) {
+    return (
+      <div className="flex flex-col items-center py-20 gap-3">
+        <AlertCircle className="h-12 w-12 text-red-400" />
+        <p className="text-red-600 font-medium">{loadError}</p>
+      </div>
+    );
+  }
+
   if (!hotel) {
     return (
       <div className="text-center py-20">
@@ -265,20 +290,65 @@ const HotelProfile = () => {
     );
   }
 
-  const SaveButton = ({ onClick }) => (
-    <button
-      onClick={onClick}
-      disabled={saving}
-      className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
-    >
-      {saving ? (
-        <Loader2 className="h-4 w-4 animate-spin" />
-      ) : (
-        <Save className="h-4 w-4" />
-      )}
-      {saving ? "Saving..." : "Save Changes"}
-    </button>
-  );
+  const SaveButton = ({ onClick }) => {
+    const getButtonContent = () => {
+      if (saving) {
+        return (
+          <>
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Saving...
+          </>
+        );
+      }
+      if (saveStatus === "success") {
+        return (
+          <>
+            <Check className="h-4 w-4" />
+            {saveMessage}
+          </>
+        );
+      }
+      if (saveStatus === "error") {
+        return (
+          <>
+            <AlertCircle className="h-4 w-4" />
+            {saveMessage}
+          </>
+        );
+      }
+      if (saveStatus === "info") {
+        return (
+          <>
+            <AlertCircle className="h-4 w-4" />
+            {saveMessage}
+          </>
+        );
+      }
+      return (
+        <>
+          <Save className="h-4 w-4" />
+          Save Changes
+        </>
+      );
+    };
+
+    const getButtonStyle = () => {
+      if (saveStatus === "success") return "bg-green-600 hover:bg-green-700";
+      if (saveStatus === "error") return "bg-red-600 hover:bg-red-700";
+      if (saveStatus === "info") return "bg-amber-600 hover:bg-amber-700";
+      return "bg-blue-600 hover:bg-blue-700";
+    };
+
+    return (
+      <button
+        onClick={onClick}
+        disabled={saving}
+        className={`inline-flex items-center gap-2 px-5 py-2.5 text-white rounded-lg text-sm font-medium transition-all disabled:opacity-50 ${getButtonStyle()}`}
+      >
+        {getButtonContent()}
+      </button>
+    );
+  };
 
   return (
     <div className="space-y-6">
@@ -297,7 +367,7 @@ const HotelProfile = () => {
               return (
                 <button
                   key={tab.key}
-                  onClick={() => setActiveTab(tab.key)}
+                  onClick={() => { setActiveTab(tab.key); setSaveStatus(null); }}
                   className={`flex items-center gap-2 px-5 py-3.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
                     activeTab === tab.key
                       ? "border-blue-600 text-blue-600"
@@ -373,6 +443,14 @@ const HotelProfile = () => {
                       </div>
                     ))}
                   </div>
+                </div>
+              )}
+
+              {/* Image error */}
+              {imageError && (
+                <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+                  <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                  {imageError}
                 </div>
               )}
 

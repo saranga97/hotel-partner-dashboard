@@ -187,6 +187,8 @@ const Dashboard = () => {
                       className={`w-2.5 h-2.5 rounded-full ${
                         booking.status === "booked"
                           ? "bg-green-500"
+                          : booking.status === "pending"
+                          ? "bg-amber-500"
                           : "bg-red-500"
                       }`}
                     />

@@ -1,12 +1,14 @@
 import { useState, useRef, useEffect } from "react";
-import { Menu, Bell, Search, BedDouble, Calendar, Trash2 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Menu, Bell, Search, BedDouble, Calendar, Trash2, Pencil } from "lucide-react";
 import { useNotifications } from "../context/NotificationContext";
 
-const Topbar = ({ setSidebarOpen, onViewRoom }) => {
+const Topbar = ({ setSidebarOpen }) => {
   const user = JSON.parse(localStorage.getItem("ceylonstay_user"));
   const hotelName = user?.fullName || "Partner";
   const [showNotifications, setShowNotifications] = useState(false);
   const dropdownRef = useRef(null);
+  const navigate = useNavigate();
 
   const { notifications, markAsRead, clearAll, unreadCount } =
     useNotifications();
@@ -35,23 +37,28 @@ const Topbar = ({ setSidebarOpen, onViewRoom }) => {
 
   const handleNotificationClick = (notification) => {
     markAsRead(notification.id);
-    if (notification.type === "room_added" && notification.data && onViewRoom) {
-      onViewRoom(notification.data);
-      setShowNotifications(false);
-    }
-    if (notification.type === "new_booking") {
-      setShowNotifications(false);
+    setShowNotifications(false);
+
+    if (notification.type === "new_booking" && notification.data?._id) {
+      navigate(`/bookings?bookingId=${notification.data._id}`);
+    } else if (
+      (notification.type === "room_added" || notification.type === "room_updated") &&
+      notification.data?._id
+    ) {
+      navigate(`/rooms?roomId=${notification.data._id}`);
     }
   };
 
   const getNotificationIcon = (type) => {
     if (type === "new_booking") return Calendar;
+    if (type === "room_updated") return Pencil;
     return BedDouble;
   };
 
   const getNotificationColors = (type) => {
     if (type === "new_booking") return "bg-blue-100 text-blue-600";
     if (type === "room_added") return "bg-green-100 text-green-600";
+    if (type === "room_updated") return "bg-amber-100 text-amber-600";
     return "bg-slate-100 text-slate-600";
   };
 
