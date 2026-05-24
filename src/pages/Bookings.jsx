@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Calendar, Search, Clock, AlertCircle, Phone, User } from "lucide-react";
+import { Calendar, Search, Clock, Phone, User } from "lucide-react";
 import axiosInstance from "../api/axiosInstance";
 import BookingDetailModal from "../components/BookingDetailModal";
+import { PageHeader, StatCard, Alert, LoadingSpinner, EmptyState, Badge, Button } from "../components/ui";
 
 const Bookings = () => {
   const [bookings, setBookings] = useState([]);
@@ -52,21 +53,18 @@ const Bookings = () => {
     fetchBookings();
   }, [statusFilter, dateFilter, page]);
 
-  // Handle bookingId URL param to auto-open modal
   useEffect(() => {
     const bookingId = searchParams.get("bookingId");
     if (bookingId && bookings.length > 0) {
       const found = bookings.find((b) => b._id === bookingId);
       if (found) {
         setSelectedBooking(found);
-        // Clear the param after opening
         searchParams.delete("bookingId");
         setSearchParams(searchParams, { replace: true });
       }
     }
   }, [bookings, searchParams]);
 
-  // Debounce search
   useEffect(() => {
     const timer = setTimeout(() => {
       setPage(1);
@@ -94,10 +92,10 @@ const Bookings = () => {
     return `${Math.floor(diff / 86400)}d ago`;
   };
 
-  const getStatusStyle = (status) => {
-    if (status === "pending") return "bg-amber-100 text-amber-800";
-    if (status === "booked") return "bg-green-100 text-green-800";
-    return "bg-red-100 text-red-800";
+  const getStatusVariant = (status) => {
+    if (status === "pending") return "warning";
+    if (status === "booked") return "success";
+    return "danger";
   };
 
   const getStatusLabel = (status) => {
@@ -111,7 +109,6 @@ const Bookings = () => {
         b._id === updatedBooking._id ? { ...b, status: updatedBooking.status } : b
       )
     );
-    // Refresh stats
     fetchBookings();
   };
 
@@ -124,33 +121,12 @@ const Bookings = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">
-          Bookings Management
-        </h1>
-        <p className="text-slate-600 mt-1">
-          Manage all your hotel reservations and bookings
-        </p>
-      </div>
+      <PageHeader title="Bookings Management" subtitle="Manage all your hotel reservations and bookings" />
 
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {bookingStats.map((stat, index) => (
-          <div
-            key={index}
-            className="bg-white rounded-xl shadow-sm border border-slate-200 p-4"
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-slate-600">{stat.label}</p>
-                <p className="text-2xl font-bold text-slate-900 mt-1">
-                  {stat.value}
-                </p>
-              </div>
-              <div className={`w-3 h-8 ${stat.color} rounded-full`}></div>
-            </div>
-          </div>
+          <StatCard key={index} value={stat.value} label={stat.label} color={stat.color} />
         ))}
       </div>
 
@@ -193,42 +169,33 @@ const Bookings = () => {
               className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             {dateFilter && (
-              <button
-                onClick={() => setDateFilter("")}
-                className="px-3 py-2 text-sm text-slate-500 hover:text-slate-700 border border-slate-300 rounded-lg"
-              >
+              <Button variant="secondary" size="sm" onClick={() => setDateFilter("")}>
                 Clear
-              </button>
+              </Button>
             )}
           </div>
         </div>
       </div>
 
       {/* Load Error */}
-      {loadError && (
-        <div className="flex items-center gap-2 p-4 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
-          <AlertCircle className="h-4 w-4 flex-shrink-0" />
-          {loadError}
-        </div>
-      )}
+      {loadError && <Alert variant="error" className="rounded-xl">{loadError}</Alert>}
 
       {/* Bookings List */}
       {loading ? (
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-12 text-center">
-          <div className="animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
-          <p className="text-slate-600">Loading bookings...</p>
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-12">
+          <LoadingSpinner message="Loading bookings..." />
         </div>
       ) : bookings.length === 0 ? (
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-12 text-center">
-          <Calendar className="h-16 w-16 text-slate-300 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-slate-900 mb-2">
-            No bookings found
-          </h3>
-          <p className="text-slate-500">
-            {searchTerm || statusFilter !== "all" || dateFilter
-              ? "Try adjusting your search or filters"
-              : "Bookings will appear here when guests make reservations"}
-          </p>
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-12">
+          <EmptyState
+            icon={Calendar}
+            message="No bookings found"
+            description={
+              searchTerm || statusFilter !== "all" || dateFilter
+                ? "Try adjusting your search or filters"
+                : "Bookings will appear here when guests make reservations"
+            }
+          />
         </div>
       ) : (
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
@@ -268,15 +235,12 @@ const Bookings = () => {
                       {booking.room?.roomLabel}
                     </p>
                   )}
-                  <span
-                    className={`inline-block mt-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium ${
-                      booking.room?.roomType === "family"
-                        ? "bg-green-50 text-green-700"
-                        : "bg-purple-50 text-purple-700"
-                    }`}
+                  <Badge
+                    variant={booking.room?.roomType === "family" ? "success" : "purple"}
+                    className="mt-0.5 px-1.5 py-0.5 text-[10px]"
                   >
                     {booking.room?.roomType}
-                  </span>
+                  </Badge>
                 </div>
 
                 {/* Guest */}
@@ -341,11 +305,9 @@ const Bookings = () => {
 
                 {/* Status */}
                 <div className="col-span-1 flex items-center">
-                  <span
-                    className={`inline-flex px-2 py-0.5 rounded-full text-[11px] font-medium ${getStatusStyle(booking.status)}`}
-                  >
+                  <Badge variant={getStatusVariant(booking.status)} className="px-2 py-0.5 text-[11px]">
                     {getStatusLabel(booking.status)}
-                  </span>
+                  </Badge>
                 </div>
 
                 {/* Time */}
@@ -365,20 +327,22 @@ const Bookings = () => {
                 Page {page} of {totalPages}
               </p>
               <div className="flex gap-2">
-                <button
+                <Button
+                  variant="secondary"
+                  size="sm"
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page === 1}
-                  className="px-3 py-1.5 border border-slate-300 rounded-lg text-sm hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Previous
-                </button>
-                <button
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
                   onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                   disabled={page === totalPages}
-                  className="px-3 py-1.5 border border-slate-300 rounded-lg text-sm hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Next
-                </button>
+                </Button>
               </div>
             </div>
           )}

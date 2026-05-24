@@ -5,7 +5,7 @@ import axiosInstance from "../api/axiosInstance";
 const NotificationContext = createContext();
 
 const STORAGE_KEY = "ceylonstay_notifications";
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "http://localhost:5001";
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL;
 
 export const NotificationProvider = ({ children }) => {
   const [notifications, setNotifications] = useState(() => {

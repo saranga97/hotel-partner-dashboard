@@ -7,9 +7,9 @@ import {
   CheckCircle,
   BedDouble,
   Ban,
-  Clock,
 } from "lucide-react";
 import axiosInstance from "../api/axiosInstance";
+import { PageHeader, StatCard, LoadingSpinner, EmptyState, Badge } from "../components/ui";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -42,11 +42,7 @@ const Dashboard = () => {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-24">
-        <div className="animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full"></div>
-      </div>
-    );
+    return <LoadingSpinner className="py-24" />;
   }
 
   const statCards = [
@@ -83,46 +79,22 @@ const Dashboard = () => {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">
-            Dashboard
-          </h1>
-          <p className="text-slate-600 mt-1">
-            Overview of your hotel performance
-          </p>
-        </div>
-        <div className="mt-4 sm:mt-0">
-          <div className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-            <div className="w-2 h-2 bg-green-400 rounded-full mr-2"></div>
-            All systems operational
-          </div>
-        </div>
-      </div>
+      <PageHeader title="Dashboard" subtitle="Overview of your hotel performance">
+        <Badge variant="success" dot>All systems operational</Badge>
+      </PageHeader>
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
-        {statCards.map((stat, index) => {
-          const Icon = stat.icon;
-          return (
-            <div
-              key={index}
-              className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 hover:shadow-md transition-shadow duration-200"
-            >
-              <div className="flex items-center justify-between mb-4">
-                <div className={`p-2 rounded-lg ${stat.lightColor}`}>
-                  <Icon className={`h-5 w-5 ${stat.textColor}`} />
-                </div>
-              </div>
-              <div className="space-y-1">
-                <h3 className="text-2xl font-bold text-slate-900">
-                  {stat.value}
-                </h3>
-                <p className="text-sm text-slate-600">{stat.title}</p>
-              </div>
-            </div>
-          );
-        })}
+        {statCards.map((stat, index) => (
+          <StatCard
+            key={index}
+            icon={stat.icon}
+            value={stat.value}
+            label={stat.title}
+            lightColor={stat.lightColor}
+            textColor={stat.textColor}
+          />
+        ))}
       </div>
 
       {/* Room Type Breakdown */}
@@ -224,10 +196,11 @@ const Dashboard = () => {
               ))}
             </div>
           ) : (
-            <div className="text-center py-8">
-              <Calendar className="h-10 w-10 text-slate-300 mx-auto mb-2" />
-              <p className="text-sm text-slate-500">No bookings yet</p>
-            </div>
+            <EmptyState
+              icon={Calendar}
+              description="No bookings yet"
+              className="py-8"
+            />
           )}
         </div>
 

@@ -27,7 +27,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
   const handleLogout = () => {
     localStorage.removeItem("ceylonstay_token");
     localStorage.removeItem("ceylonstay_user");
-    window.location.href = 'http://localhost:5173/login'
+    window.location.href = `${import.meta.env.VITE_APP_URL}/login`
     // navigate("/login");
   };
 

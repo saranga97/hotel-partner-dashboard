@@ -5,6 +5,7 @@ import {
   Building2, Image, MapPin, Phone, Coffee, HelpCircle, Shield,
   Upload, X, Plus, Trash2, Save, Loader2, Check, AlertCircle,
 } from "lucide-react";
+import { PageHeader, FormInput, Alert, LoadingSpinner, EmptyState, Button, ToggleChip } from "../components/ui";
 
 const TABS = [
   { key: "overview", label: "Overview", icon: Building2 },
@@ -43,39 +44,30 @@ const HotelProfile = () => {
   const [saving, setSaving] = useState(false);
   const [loadError, setLoadError] = useState("");
 
-  // Save feedback state
-  const [saveStatus, setSaveStatus] = useState(null); // null | 'success' | 'error' | 'info'
+  const [saveStatus, setSaveStatus] = useState(null);
   const [saveMessage, setSaveMessage] = useState("");
 
-  // Overview state
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
 
-  // Gallery state
   const [existingImages, setExistingImages] = useState([]);
   const [newImages, setNewImages] = useState([]);
   const [newPreviews, setNewPreviews] = useState([]);
   const [imageError, setImageError] = useState("");
 
-  // Location state
   const [address, setAddress] = useState("");
   const [location, setLocation] = useState("");
   const [coordinates, setCoordinates] = useState(null);
 
-  // Contact state
   const [mobile, setMobile] = useState("");
   const [email, setEmail] = useState("");
 
-  // Facilities state
   const [amenities, setAmenities] = useState([]);
   const [customAmenity, setCustomAmenity] = useState("");
   const [activities, setActivities] = useState([]);
   const [customActivity, setCustomActivity] = useState("");
 
-  // FAQs state
   const [faqs, setFaqs] = useState([]);
-
-  // Policies state
   const [policies, setPolicies] = useState([]);
 
   useEffect(() => {
@@ -142,9 +134,7 @@ const HotelProfile = () => {
     }
   };
 
-  const handleSaveOverview = () => {
-    saveSection({ name, description });
-  };
+  const handleSaveOverview = () => saveSection({ name, description });
 
   const handleSaveGallery = () => {
     if (newImages.length === 0 && existingImages.length > 0) {
@@ -154,7 +144,6 @@ const HotelProfile = () => {
     const formData = new FormData();
     newImages.forEach((file) => formData.append("images", file));
     saveSection(formData);
-    // Clear new image state after upload
     newPreviews.forEach((p) => URL.revokeObjectURL(p));
     setNewImages([]);
     setNewPreviews([]);
@@ -168,9 +157,7 @@ const HotelProfile = () => {
     });
   };
 
-  const handleSaveContact = () => {
-    saveSection({ mobile, email });
-  };
+  const handleSaveContact = () => saveSection({ mobile, email });
 
   const handleSaveFacilities = () => {
     saveSection({
@@ -189,7 +176,6 @@ const HotelProfile = () => {
     saveSection({ policies: JSON.stringify(validPolicies) });
   };
 
-  // Image handlers
   const handleNewImages = (e) => {
     const files = Array.from(e.target.files);
     const total = existingImages.length + newImages.length + files.length;
@@ -209,7 +195,6 @@ const HotelProfile = () => {
     setNewPreviews((prev) => prev.filter((_, i) => i !== index));
   };
 
-  // Amenity handlers
   const toggleAmenity = (amenity) => {
     setAmenities((prev) =>
       prev.includes(amenity) ? prev.filter((a) => a !== amenity) : [...prev, amenity]
@@ -224,7 +209,6 @@ const HotelProfile = () => {
     }
   };
 
-  // Activity handlers
   const toggleActivity = (activity) => {
     setActivities((prev) =>
       prev.includes(activity) ? prev.filter((a) => a !== activity) : [...prev, activity]
@@ -239,14 +223,12 @@ const HotelProfile = () => {
     }
   };
 
-  // FAQ handlers
   const addFaq = () => setFaqs((prev) => [...prev, { question: "", answer: "" }]);
   const updateFaq = (index, field, value) => {
     setFaqs((prev) => prev.map((f, i) => (i === index ? { ...f, [field]: value } : f)));
   };
   const removeFaq = (index) => setFaqs((prev) => prev.filter((_, i) => i !== index));
 
-  // Policy handlers
   const addPolicy = (title = "") => {
     setPolicies((prev) => [...prev, { title, description: "" }]);
   };
@@ -255,18 +237,13 @@ const HotelProfile = () => {
   };
   const removePolicy = (index) => setPolicies((prev) => prev.filter((_, i) => i !== index));
 
-  // Location handler
   const handleLocationSelect = (data) => {
     setAddress(data.address);
     setCoordinates(data.coordinates);
   };
 
   if (loading) {
-    return (
-      <div className="flex justify-center items-center py-20">
-        <Loader2 className="h-8 w-8 text-blue-600 animate-spin" />
-      </div>
-    );
+    return <LoadingSpinner className="py-20" />;
   }
 
   if (loadError) {
@@ -280,13 +257,12 @@ const HotelProfile = () => {
 
   if (!hotel) {
     return (
-      <div className="text-center py-20">
-        <Building2 className="h-16 w-16 text-slate-300 mx-auto mb-4" />
-        <h2 className="text-xl font-semibold text-slate-700">No Hotel Found</h2>
-        <p className="text-slate-500 mt-2">
-          You haven't registered a hotel yet.
-        </p>
-      </div>
+      <EmptyState
+        icon={Building2}
+        message="No Hotel Found"
+        description="You haven't registered a hotel yet."
+        className="py-20"
+      />
     );
   }
 
@@ -352,11 +328,7 @@ const HotelProfile = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">Hotel Profile</h1>
-        <p className="text-slate-600 mt-1">Manage your hotel information and settings</p>
-      </div>
+      <PageHeader title="Hotel Profile" subtitle="Manage your hotel information and settings" />
 
       {/* Tabs */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200">
@@ -386,17 +358,11 @@ const HotelProfile = () => {
           {/* Overview Tab */}
           {activeTab === "overview" && (
             <div className="space-y-5">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Hotel Name
-                </label>
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
+              <FormInput
+                label="Hotel Name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">
                   Hotel Description
@@ -421,7 +387,6 @@ const HotelProfile = () => {
           {/* Gallery Tab */}
           {activeTab === "gallery" && (
             <div className="space-y-5">
-              {/* Existing images */}
               {existingImages.length > 0 && (
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-3">
@@ -446,15 +411,8 @@ const HotelProfile = () => {
                 </div>
               )}
 
-              {/* Image error */}
-              {imageError && (
-                <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
-                  <AlertCircle className="h-4 w-4 flex-shrink-0" />
-                  {imageError}
-                </div>
-              )}
+              {imageError && <Alert variant="error">{imageError}</Alert>}
 
-              {/* New images upload */}
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-3">
                   Upload New Images (replaces current gallery)
@@ -503,18 +461,12 @@ const HotelProfile = () => {
           {/* Location Tab */}
           {activeTab === "location" && (
             <div className="space-y-5">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Location Name
-                </label>
-                <input
-                  type="text"
-                  value={location}
-                  onChange={(e) => setLocation(e.target.value)}
-                  placeholder="e.g. Sigiriya, Sri Lanka"
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
+              <FormInput
+                label="Location Name"
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+                placeholder="e.g. Sigiriya, Sri Lanka"
+              />
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-3">
                   Pick Location on Map
@@ -526,18 +478,12 @@ const HotelProfile = () => {
                   }
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Full Address
-                </label>
-                <input
-                  type="text"
-                  value={address}
-                  onChange={(e) => setAddress(e.target.value)}
-                  placeholder="Auto-filled from map or enter manually"
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
+              <FormInput
+                label="Full Address"
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                placeholder="Auto-filled from map or enter manually"
+              />
               {coordinates && (
                 <p className="text-xs text-slate-400">
                   Coordinates: {coordinates.lat.toFixed(6)}, {coordinates.lng.toFixed(6)}
@@ -552,30 +498,20 @@ const HotelProfile = () => {
           {/* Contact Tab */}
           {activeTab === "contact" && (
             <div className="space-y-5">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Phone Number
-                </label>
-                <input
-                  type="tel"
-                  value={mobile}
-                  onChange={(e) => setMobile(e.target.value)}
-                  placeholder="+94 XX XXX XXXX"
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Email Address
-                </label>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="hotel@example.com"
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
+              <FormInput
+                label="Phone Number"
+                type="tel"
+                value={mobile}
+                onChange={(e) => setMobile(e.target.value)}
+                placeholder="+94 XX XXX XXXX"
+              />
+              <FormInput
+                label="Email Address"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="hotel@example.com"
+              />
               <div className="flex justify-end pt-2">
                 <SaveButton onClick={handleSaveContact} />
               </div>
@@ -590,33 +526,24 @@ const HotelProfile = () => {
                 <h3 className="text-lg font-semibold text-slate-800 mb-3">Hotel Amenities</h3>
                 <div className="flex flex-wrap gap-2 mb-3">
                   {PREDEFINED_AMENITIES.map((amenity) => (
-                    <button
+                    <ToggleChip
                       key={amenity}
-                      type="button"
-                      onClick={() => toggleAmenity(amenity)}
-                      className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                        amenities.includes(amenity)
-                          ? "bg-blue-100 text-blue-800 border border-blue-300"
-                          : "bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200"
-                      }`}
-                    >
-                      {amenity}
-                    </button>
+                      label={amenity}
+                      selected={amenities.includes(amenity)}
+                      onToggle={() => toggleAmenity(amenity)}
+                    />
                   ))}
                 </div>
-                {/* Custom amenities */}
                 {amenities
                   .filter((a) => !PREDEFINED_AMENITIES.includes(a))
                   .map((amenity) => (
-                    <span
+                    <ToggleChip
                       key={amenity}
-                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-300 mr-2 mb-2"
-                    >
-                      {amenity}
-                      <button type="button" onClick={() => toggleAmenity(amenity)} className="hover:text-red-600">
-                        <X className="h-3 w-3" />
-                      </button>
-                    </span>
+                      label={amenity}
+                      removable
+                      onToggle={() => toggleAmenity(amenity)}
+                      className="mr-2 mb-2"
+                    />
                   ))}
                 <div className="flex gap-2">
                   <input
@@ -629,13 +556,7 @@ const HotelProfile = () => {
                     placeholder="Add custom amenity..."
                     className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
-                  <button
-                    type="button"
-                    onClick={addCustomAmenity}
-                    className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm transition-colors"
-                  >
-                    Add
-                  </button>
+                  <Button variant="secondary" size="sm" onClick={addCustomAmenity}>Add</Button>
                 </div>
               </div>
 
@@ -644,18 +565,13 @@ const HotelProfile = () => {
                 <h3 className="text-lg font-semibold text-slate-800 mb-3">Activities</h3>
                 <div className="flex flex-wrap gap-2 mb-3">
                   {PREDEFINED_ACTIVITIES.map((activity) => (
-                    <button
+                    <ToggleChip
                       key={activity}
-                      type="button"
-                      onClick={() => toggleActivity(activity)}
-                      className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                        activities.includes(activity)
-                          ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
-                          : "bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200"
-                      }`}
-                    >
-                      {activity}
-                    </button>
+                      label={activity}
+                      selected={activities.includes(activity)}
+                      onToggle={() => toggleActivity(activity)}
+                      selectedColor="bg-emerald-100 text-emerald-800 border-emerald-300"
+                    />
                   ))}
                 </div>
                 {activities
@@ -682,13 +598,7 @@ const HotelProfile = () => {
                     placeholder="Add custom activity..."
                     className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
-                  <button
-                    type="button"
-                    onClick={addCustomActivity}
-                    className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm transition-colors"
-                  >
-                    Add
-                  </button>
+                  <Button variant="secondary" size="sm" onClick={addCustomActivity}>Add</Button>
                 </div>
               </div>
 
@@ -738,12 +648,10 @@ const HotelProfile = () => {
                       </button>
                     </div>
                     <div className="space-y-3">
-                      <input
-                        type="text"
+                      <FormInput
                         value={faq.question}
                         onChange={(e) => updateFaq(idx, "question", e.target.value)}
                         placeholder="Question"
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       />
                       <textarea
                         value={faq.answer}
@@ -779,7 +687,6 @@ const HotelProfile = () => {
                 </button>
               </div>
 
-              {/* Quick add suggestions */}
               {POLICY_SUGGESTIONS.filter(
                 (s) => !policies.some((p) => p.title === s)
               ).length > 0 && (
@@ -827,12 +734,10 @@ const HotelProfile = () => {
                       </button>
                     </div>
                     <div className="space-y-3">
-                      <input
-                        type="text"
+                      <FormInput
                         value={policy.title}
                         onChange={(e) => updatePolicy(idx, "title", e.target.value)}
                         placeholder="Policy title (e.g. Pet Policy)"
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       />
                       <textarea
                         value={policy.description}

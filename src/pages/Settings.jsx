@@ -1,4 +1,5 @@
 import { Settings as SettingsIcon, User, Bell, Shield, Palette, Globe, Database, Key } from "lucide-react";
+import { PageHeader, Button } from "../components/ui";
 
 const Settings = () => {
   const settingsCategories = [
@@ -54,13 +55,7 @@ const Settings = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">Settings</h1>
-          <p className="text-slate-600 mt-1">Manage your account and application preferences</p>
-        </div>
-      </div>
+      <PageHeader title="Settings" subtitle="Manage your account and application preferences" />
 
       {/* Quick Profile Card */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
@@ -73,9 +68,7 @@ const Settings = () => {
             <p className="text-slate-600">partner@ceylonstay.com</p>
             <p className="text-sm text-slate-500 mt-1">Last login: Today at 9:30 AM</p>
           </div>
-          <button className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors duration-200">
-            Edit Profile
-          </button>
+          <Button variant="primary">Edit Profile</Button>
         </div>
       </div>
 
@@ -129,7 +122,7 @@ const Settings = () => {
           <p className="text-slate-600 mb-6 max-w-md mx-auto">
             Comprehensive configuration interface for all system settings and preferences
           </p>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-2xl mx-auto mt-8">
             <div className="p-4 bg-blue-50 rounded-lg">
               <User className="h-8 w-8 text-blue-600 mx-auto mb-2" />
@@ -147,7 +140,7 @@ const Settings = () => {
               <p className="text-sm text-purple-700 mt-1">Integration settings</p>
             </div>
           </div>
-          
+
           <div className="mt-8 p-4 bg-slate-50 rounded-lg border-2 border-dashed border-slate-300">
             <p className="text-slate-600 font-medium">Settings Interface Coming Soon</p>
             <p className="text-slate-500 text-sm mt-1">Complete settings management with all configuration options</p>

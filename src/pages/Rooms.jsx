@@ -4,6 +4,7 @@ import { BedDouble, Plus, Search, Trash2, Image, Clock, Check, AlertCircle } fro
 import axiosInstance from "../api/axiosInstance";
 import AddRoomModal from "../components/AddRoomModal";
 import RoomDetailsModal from "../components/RoomDetailsModal";
+import { PageHeader, StatCard, Alert, LoadingSpinner, EmptyState, Badge, Button } from "../components/ui";
 
 const Rooms = () => {
   const [rooms, setRooms] = useState([]);
@@ -16,8 +17,7 @@ const Rooms = () => {
   const [loadError, setLoadError] = useState("");
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // Per-room inline feedback
-  const [roomFeedback, setRoomFeedback] = useState({}); // { [roomId]: { status, message } }
+  const [roomFeedback, setRoomFeedback] = useState({});
 
   const showRoomFeedback = (roomId, status, message) => {
     setRoomFeedback((prev) => ({ ...prev, [roomId]: { status, message } }));
@@ -54,7 +54,6 @@ const Rooms = () => {
     fetchData();
   }, []);
 
-  // Handle roomId URL param to auto-open modal
   useEffect(() => {
     const roomId = searchParams.get("roomId");
     if (roomId && rooms.length > 0) {
@@ -130,44 +129,17 @@ const Rooms = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">
-            Room Management
-          </h1>
-          <p className="text-slate-600 mt-1">
-            Manage your hotel rooms, availability, and pricing
-          </p>
-        </div>
-        <div className="mt-4 sm:mt-0 flex space-x-3">
-          <button
-            onClick={() => setShowModal(true)}
-            className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors duration-200"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Add Room
-          </button>
-        </div>
-      </div>
+      <PageHeader title="Room Management" subtitle="Manage your hotel rooms, availability, and pricing">
+        <Button onClick={() => setShowModal(true)}>
+          <Plus className="h-4 w-4 mr-2" />
+          Add Room
+        </Button>
+      </PageHeader>
 
       {/* Room Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {roomStats.map((stat, index) => (
-          <div
-            key={index}
-            className="bg-white rounded-xl shadow-sm border border-slate-200 p-4"
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-slate-600">{stat.label}</p>
-                <p className="text-2xl font-bold text-slate-900 mt-1">
-                  {stat.value}
-                </p>
-              </div>
-              <div className={`w-3 h-8 ${stat.color} rounded-full`}></div>
-            </div>
-          </div>
+          <StatCard key={index} value={stat.value} label={stat.label} color={stat.color} />
         ))}
       </div>
 
@@ -201,39 +173,32 @@ const Rooms = () => {
       </div>
 
       {/* Load Error */}
-      {loadError && (
-        <div className="flex items-center gap-2 p-4 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
-          <AlertCircle className="h-4 w-4 flex-shrink-0" />
-          {loadError}
-        </div>
-      )}
+      {loadError && <Alert variant="error" className="rounded-xl">{loadError}</Alert>}
 
       {/* Room List */}
       {loading ? (
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-12 text-center">
-          <div className="animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
-          <p className="text-slate-600">Loading rooms...</p>
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-12">
+          <LoadingSpinner message="Loading rooms..." />
         </div>
       ) : filteredRooms.length === 0 ? (
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-12 text-center">
-          <BedDouble className="h-16 w-16 text-slate-300 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-slate-900 mb-2">
-            {rooms.length === 0 ? "No rooms yet" : "No rooms match your search"}
-          </h3>
-          <p className="text-slate-500 mb-6">
-            {rooms.length === 0
-              ? "Click 'Add Room' to add your first room"
-              : "Try adjusting your search or filters"}
-          </p>
-          {rooms.length === 0 && (
-            <button
-              onClick={() => setShowModal(true)}
-              className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add Room
-            </button>
-          )}
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-12">
+          <EmptyState
+            icon={BedDouble}
+            message={rooms.length === 0 ? "No rooms yet" : "No rooms match your search"}
+            description={
+              rooms.length === 0
+                ? "Click 'Add Room' to add your first room"
+                : "Try adjusting your search or filters"
+            }
+            action={
+              rooms.length === 0 && (
+                <Button onClick={() => setShowModal(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Room
+                </Button>
+              )
+            }
+          />
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -257,29 +222,16 @@ const Rooms = () => {
                   </div>
                 )}
                 <div className="absolute top-3 left-3 flex gap-2">
-                  <span
-                    className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      room.roomType === "family"
-                        ? "bg-green-100 text-green-800"
-                        : "bg-purple-100 text-purple-800"
-                    }`}
-                  >
-                    {room.roomType.charAt(0).toUpperCase() +
-                      room.roomType.slice(1)}
-                  </span>
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                    room.nightStayAcType === "AC"
-                      ? "bg-blue-100 text-blue-800"
-                      : "bg-slate-100 text-slate-800"
-                  }`}>
+                  <Badge variant={room.roomType === "family" ? "success" : "purple"} className="px-2 py-1">
+                    {room.roomType.charAt(0).toUpperCase() + room.roomType.slice(1)}
+                  </Badge>
+                  <Badge variant={room.nightStayAcType === "AC" ? "info" : "neutral"} className="px-2 py-1">
                     {room.nightStayAcType}
-                  </span>
+                  </Badge>
                 </div>
                 {room.isManuallyBlocked && (
                   <div className="absolute top-3 right-3">
-                    <span className="px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs font-medium">
-                      Blocked
-                    </span>
+                    <Badge variant="danger" className="px-2 py-1">Blocked</Badge>
                   </div>
                 )}
                 {room.images && room.images.length > 1 && (
@@ -301,7 +253,6 @@ const Rooms = () => {
                     )}
                   </div>
                   <div className="flex items-center gap-2">
-                    {/* Inline feedback */}
                     {roomFeedback[room._id] && (
                       <span
                         className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full ${
@@ -318,7 +269,6 @@ const Rooms = () => {
                         {roomFeedback[room._id].message}
                       </span>
                     )}
-                    {/* Availability Toggle */}
                     <button
                       onClick={(e) => handleToggleBlock(e, room)}
                       className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
@@ -418,7 +368,6 @@ const Rooms = () => {
         </div>
       )}
 
-      {/* Add Room Modal */}
       <AddRoomModal
         isOpen={showModal}
         onClose={() => setShowModal(false)}
@@ -426,7 +375,6 @@ const Rooms = () => {
         onRoomAdded={fetchData}
       />
 
-      {/* Room Details Modal */}
       {selectedRoom && (
         <RoomDetailsModal
           room={selectedRoom}

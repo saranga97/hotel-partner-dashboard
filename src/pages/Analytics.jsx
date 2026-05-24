@@ -1,4 +1,5 @@
 import { BarChart3, TrendingUp, PieChart, Activity, Calendar, Users, DollarSign } from "lucide-react";
+import { PageHeader, StatCard } from "../components/ui";
 
 const Analytics = () => {
   const reportTypes = [
@@ -38,77 +39,43 @@ const Analytics = () => {
 
   const timeframes = ["Daily", "Weekly", "Monthly", "Quarterly", "Yearly"];
 
+  const quickStats = [
+    { icon: DollarSign, value: "$45,231", label: "Revenue", trend: "↑ 12.5%", trendColor: "text-green-600", lightColor: "bg-blue-50", textColor: "text-blue-600" },
+    { icon: Activity, value: "78.4%", label: "Occupancy Rate", trend: "↑ 5.2%", trendColor: "text-green-600", lightColor: "bg-green-50", textColor: "text-green-600" },
+    { icon: TrendingUp, value: "$156", label: "Avg. Daily Rate", trend: "↓ 2.1%", trendColor: "text-red-600", lightColor: "bg-purple-50", textColor: "text-purple-600" },
+    { icon: Users, value: "4.8", label: "Guest Satisfaction", trend: "↑ 0.3", trendColor: "text-green-600", lightColor: "bg-orange-50", textColor: "text-orange-600" },
+  ];
+
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">Analytics & Reports</h1>
-          <p className="text-slate-600 mt-1">Comprehensive insights into your hotel's performance</p>
-        </div>
-        <div className="mt-4 sm:mt-0">
-          <select className="px-4 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
-            <option>Last 30 days</option>
-            <option>Last 3 months</option>
-            <option>Last 6 months</option>
-            <option>Last year</option>
-          </select>
-        </div>
-      </div>
+      <PageHeader title="Analytics & Reports" subtitle="Comprehensive insights into your hotel's performance">
+        <select className="px-4 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+          <option>Last 30 days</option>
+          <option>Last 3 months</option>
+          <option>Last 6 months</option>
+          <option>Last year</option>
+        </select>
+      </PageHeader>
 
       {/* Quick Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-slate-600">Revenue</p>
-              <p className="text-2xl font-bold text-slate-900">$45,231</p>
-              <p className="text-sm text-green-600 mt-1">↑ 12.5%</p>
+        {quickStats.map((stat, index) => {
+          const Icon = stat.icon;
+          return (
+            <div key={index} className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-slate-600">{stat.label}</p>
+                  <p className="text-2xl font-bold text-slate-900">{stat.value}</p>
+                  <p className={`text-sm ${stat.trendColor} mt-1`}>{stat.trend}</p>
+                </div>
+                <div className={`p-3 ${stat.lightColor} rounded-lg`}>
+                  <Icon className={`h-6 w-6 ${stat.textColor}`} />
+                </div>
+              </div>
             </div>
-            <div className="p-3 bg-blue-50 rounded-lg">
-              <DollarSign className="h-6 w-6 text-blue-600" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-slate-600">Occupancy Rate</p>
-              <p className="text-2xl font-bold text-slate-900">78.4%</p>
-              <p className="text-sm text-green-600 mt-1">↑ 5.2%</p>
-            </div>
-            <div className="p-3 bg-green-50 rounded-lg">
-              <Activity className="h-6 w-6 text-green-600" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-slate-600">Avg. Daily Rate</p>
-              <p className="text-2xl font-bold text-slate-900">$156</p>
-              <p className="text-sm text-red-600 mt-1">↓ 2.1%</p>
-            </div>
-            <div className="p-3 bg-purple-50 rounded-lg">
-              <TrendingUp className="h-6 w-6 text-purple-600" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-slate-600">Guest Satisfaction</p>
-              <p className="text-2xl font-bold text-slate-900">4.8</p>
-              <p className="text-sm text-green-600 mt-1">↑ 0.3</p>
-            </div>
-            <div className="p-3 bg-orange-50 rounded-lg">
-              <Users className="h-6 w-6 text-orange-600" />
-            </div>
-          </div>
-        </div>
+          );
+        })}
       </div>
 
       {/* Report Types */}
@@ -142,8 +109,8 @@ const Analytics = () => {
             <button
               key={index}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 ${
-                index === 2 
-                  ? "bg-blue-100 text-blue-700 border border-blue-200" 
+                index === 2
+                  ? "bg-blue-100 text-blue-700 border border-blue-200"
                   : "bg-slate-100 text-slate-700 hover:bg-slate-200"
               }`}
             >
@@ -161,7 +128,7 @@ const Analytics = () => {
           <p className="text-slate-600 mb-6 max-w-md mx-auto">
             Comprehensive visual analytics with interactive charts, graphs, and detailed reporting capabilities
           </p>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-2xl mx-auto mt-8">
             <div className="p-4 bg-blue-50 rounded-lg">
               <BarChart3 className="h-8 w-8 text-blue-600 mx-auto mb-2" />
@@ -179,7 +146,7 @@ const Analytics = () => {
               <p className="text-sm text-purple-700 mt-1">KPI tracking & benchmarks</p>
             </div>
           </div>
-          
+
           <div className="mt-8 p-4 bg-slate-50 rounded-lg border-2 border-dashed border-slate-300">
             <p className="text-slate-600 font-medium">Interactive Charts Coming Soon</p>
             <p className="text-slate-500 text-sm mt-1">Visual graphs and detailed reports with export capabilities</p>

@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Menu, Bell, Search, BedDouble, Calendar, Trash2, Pencil } from "lucide-react";
 import { useNotifications } from "../context/NotificationContext";
+import { EmptyState } from "./ui";
 
 const Topbar = ({ setSidebarOpen }) => {
   const user = JSON.parse(localStorage.getItem("ceylonstay_user"));
@@ -13,7 +14,6 @@ const Topbar = ({ setSidebarOpen }) => {
   const { notifications, markAsRead, clearAll, unreadCount } =
     useNotifications();
 
-  // Close dropdown on outside click
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
@@ -67,7 +67,6 @@ const Topbar = ({ setSidebarOpen }) => {
       <div className="flex items-center justify-between px-4 sm:px-6 lg:px-8 py-4">
         {/* Left section */}
         <div className="flex items-center space-x-4">
-          {/* Mobile menu button */}
           <button
             onClick={() => setSidebarOpen((prev) => !prev)}
             className="lg:hidden p-2 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200"
@@ -75,7 +74,6 @@ const Topbar = ({ setSidebarOpen }) => {
             <Menu className="h-5 w-5" />
           </button>
 
-          {/* Hotel name */}
           <div className="hidden sm:block">
             <h1 className="text-lg font-semibold text-slate-900">
               {hotelName}
@@ -84,7 +82,7 @@ const Topbar = ({ setSidebarOpen }) => {
           </div>
         </div>
 
-        {/* Search bar - hidden on mobile */}
+        {/* Search bar */}
         <div className="hidden md:flex flex-1 max-w-md mx-8">
           <div className="relative w-full">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -100,7 +98,6 @@ const Topbar = ({ setSidebarOpen }) => {
 
         {/* Right section */}
         <div className="flex items-center space-x-3">
-          {/* Notifications */}
           <div className="relative" ref={dropdownRef}>
             <button
               onClick={() => setShowNotifications(!showNotifications)}
@@ -114,10 +111,8 @@ const Topbar = ({ setSidebarOpen }) => {
               )}
             </button>
 
-            {/* Notification Dropdown */}
             {showNotifications && (
               <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-xl border border-slate-200 overflow-hidden z-50">
-                {/* Header */}
                 <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
                   <h3 className="text-sm font-semibold text-slate-900">
                     Notifications
@@ -133,7 +128,6 @@ const Topbar = ({ setSidebarOpen }) => {
                   )}
                 </div>
 
-                {/* Notification List */}
                 <div className="max-h-80 overflow-y-auto">
                   {notifications.length === 0 ? (
                     <div className="px-4 py-8 text-center">
@@ -188,7 +182,6 @@ const Topbar = ({ setSidebarOpen }) => {
             )}
           </div>
 
-          {/* User profile */}
           <div className="flex items-center space-x-3 pl-3 border-l border-slate-200">
             <div className="hidden sm:block text-right">
               <div className="text-sm font-medium text-slate-900">

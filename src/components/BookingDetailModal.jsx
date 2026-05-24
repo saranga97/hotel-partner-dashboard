@@ -13,10 +13,11 @@ import {
   AlertCircle,
 } from "lucide-react";
 import axiosInstance from "../api/axiosInstance";
+import { Modal, Badge, Alert, Button } from "./ui";
 
 const BookingDetailModal = ({ booking, onClose, onStatusChange }) => {
-  const [actionLoading, setActionLoading] = useState(null); // 'approve' | 'reject'
-  const [actionStatus, setActionStatus] = useState(null); // null | 'approved' | 'rejected' | 'error'
+  const [actionLoading, setActionLoading] = useState(null);
+  const [actionStatus, setActionStatus] = useState(null);
   const [actionMessage, setActionMessage] = useState("");
 
   if (!booking) return null;
@@ -32,10 +33,10 @@ const BookingDetailModal = ({ booking, onClose, onStatusChange }) => {
     return `${displayHour}:${m} ${ampm}`;
   };
 
-  const getStatusStyle = (status) => {
-    if (status === "pending") return "bg-amber-100 text-amber-800";
-    if (status === "booked") return "bg-green-100 text-green-800";
-    return "bg-red-100 text-red-800";
+  const getStatusVariant = (status) => {
+    if (status === "pending") return "warning";
+    if (status === "booked") return "success";
+    return "danger";
   };
 
   const getStatusLabel = (status) => {
@@ -82,228 +83,172 @@ const BookingDetailModal = ({ booking, onClose, onStatusChange }) => {
     : booking.status;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-        onClick={onClose}
-      />
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-hidden mx-4">
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
-          <div className="flex items-center gap-3">
-            <h2 className="text-lg font-bold text-slate-900">
-              Booking Details
-            </h2>
-            <span
-              className={`px-2.5 py-1 rounded-full text-xs font-medium ${getStatusStyle(currentStatus)}`}
-            >
-              {getStatusLabel(currentStatus)}
-            </span>
+    <Modal isOpen={true} onClose={onClose} maxWidth="max-w-lg">
+      {/* Header */}
+      <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
+        <div className="flex items-center gap-3">
+          <h2 className="text-lg font-bold text-slate-900">Booking Details</h2>
+          <Badge variant={getStatusVariant(currentStatus)}>
+            {getStatusLabel(currentStatus)}
+          </Badge>
+        </div>
+        <button
+          onClick={onClose}
+          className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+        >
+          <X className="h-5 w-5" />
+        </button>
+      </div>
+
+      {/* Content */}
+      <div className="overflow-y-auto p-6 space-y-5">
+        {/* Room Info */}
+        <div className="flex items-start gap-3">
+          <div className="p-2 bg-blue-50 rounded-lg">
+            <BedDouble className="h-5 w-5 text-blue-600" />
           </div>
-          <button
-            onClick={onClose}
-            className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
-          >
-            <X className="h-5 w-5" />
-          </button>
+          <div>
+            <p className="text-sm font-medium text-slate-900">
+              {booking.room?.roomName || booking.room?.roomLabel || "N/A"}
+            </p>
+            {booking.room?.roomName && (
+              <p className="text-xs text-slate-500">{booking.room?.roomLabel}</p>
+            )}
+            <Badge
+              variant={booking.room?.roomType === "family" ? "success" : "purple"}
+              className="mt-0.5 px-1.5 py-0.5 text-xs"
+            >
+              {booking.room?.roomType}
+            </Badge>
+          </div>
         </div>
 
-        {/* Content */}
-        <div className="overflow-y-auto p-6 space-y-5">
-          {/* Room Info */}
-          <div className="flex items-start gap-3">
-            <div className="p-2 bg-blue-50 rounded-lg">
-              <BedDouble className="h-5 w-5 text-blue-600" />
+        {/* Guest Info */}
+        <div className="flex items-start gap-3">
+          {booking.user?.profileImage ? (
+            <img
+              src={booking.user.profileImage}
+              alt={booking.user.fullName}
+              className="w-10 h-10 rounded-full object-cover flex-shrink-0"
+            />
+          ) : (
+            <div className="p-2 bg-slate-50 rounded-lg flex-shrink-0">
+              <User className="h-5 w-5 text-slate-600" />
             </div>
-            <div>
-              <p className="text-sm font-medium text-slate-900">
-                {booking.room?.roomName || booking.room?.roomLabel || "N/A"}
-              </p>
-              {booking.room?.roomName && (
-                <p className="text-xs text-slate-500">
-                  {booking.room?.roomLabel}
-                </p>
-              )}
-              <span
-                className={`inline-block mt-0.5 px-1.5 py-0.5 rounded text-xs font-medium ${
-                  booking.room?.roomType === "family"
-                    ? "bg-green-50 text-green-700"
-                    : "bg-purple-50 text-purple-700"
-                }`}
-              >
-                {booking.room?.roomType}
-              </span>
+          )}
+          <div>
+            <p className="text-sm font-medium text-slate-900">
+              {booking.user?.fullName || "Guest"}
+            </p>
+            <div className="flex items-center gap-1 mt-0.5">
+              <Mail className="h-3 w-3 text-slate-400" />
+              <p className="text-xs text-slate-500">{booking.user?.email || "N/A"}</p>
             </div>
-          </div>
-
-          {/* Guest Info */}
-          <div className="flex items-start gap-3">
-            {booking.user?.profileImage ? (
-              <img
-                src={booking.user.profileImage}
-                alt={booking.user.fullName}
-                className="w-10 h-10 rounded-full object-cover flex-shrink-0"
-              />
-            ) : (
-              <div className="p-2 bg-slate-50 rounded-lg flex-shrink-0">
-                <User className="h-5 w-5 text-slate-600" />
-              </div>
-            )}
-            <div>
-              <p className="text-sm font-medium text-slate-900">
-                {booking.user?.fullName || "Guest"}
-              </p>
-              <div className="flex items-center gap-1 mt-0.5">
-                <Mail className="h-3 w-3 text-slate-400" />
-                <p className="text-xs text-slate-500">
-                  {booking.user?.email || "N/A"}
-                </p>
-              </div>
-              <div className="flex items-center gap-1 mt-0.5">
-                <Phone className="h-3 w-3 text-slate-400" />
-                <p className="text-xs text-slate-500">
-                  {booking.user?.mobile || "N/A"}
-                </p>
-              </div>
+            <div className="flex items-center gap-1 mt-0.5">
+              <Phone className="h-3 w-3 text-slate-400" />
+              <p className="text-xs text-slate-500">{booking.user?.mobile || "N/A"}</p>
             </div>
           </div>
+        </div>
 
-          {/* Date */}
-          <div className="flex items-start gap-3">
-            <div className="p-2 bg-amber-50 rounded-lg">
-              <Calendar className="h-5 w-5 text-amber-600" />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-slate-900">
-                {booking.date}
-              </p>
-              <p className="text-xs text-slate-500">Booking Date</p>
-            </div>
+        {/* Date */}
+        <div className="flex items-start gap-3">
+          <div className="p-2 bg-amber-50 rounded-lg">
+            <Calendar className="h-5 w-5 text-amber-600" />
           </div>
+          <div>
+            <p className="text-sm font-medium text-slate-900">{booking.date}</p>
+            <p className="text-xs text-slate-500">Booking Date</p>
+          </div>
+        </div>
 
-          {/* Package Details */}
-          <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
-            <h3 className="text-sm font-semibold text-slate-700">
-              Package Details
-            </h3>
-            <div className="grid grid-cols-2 gap-3">
+        {/* Package Details */}
+        <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
+          <h3 className="text-sm font-semibold text-slate-700">Package Details</h3>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <p className="text-xs text-slate-500">Type</p>
+              <p className="text-sm font-medium text-slate-900">
+                {pkg?.type === "night" ? "Night Stay" : pkg?.packageName || "Day Out"}
+              </p>
+            </div>
+            {pkg?.checkInTime && (
               <div>
-                <p className="text-xs text-slate-500">Type</p>
-                <p className="text-sm font-medium text-slate-900">
-                  {pkg?.type === "night"
-                    ? "Night Stay"
-                    : pkg?.packageName || "Day Out"}
-                </p>
-              </div>
-              {pkg?.checkInTime && (
-                <div>
-                  <p className="text-xs text-slate-500">Time Slot</p>
-                  <div className="flex items-center gap-1">
-                    <Clock className="h-3 w-3 text-slate-400" />
-                    <p className="text-sm font-medium text-slate-900">
-                      {formatTime(pkg.checkInTime)} -{" "}
-                      {formatTime(pkg.checkOutTime)}
-                    </p>
-                  </div>
-                </div>
-              )}
-              <div>
-                <p className="text-xs text-slate-500">AC Type</p>
+                <p className="text-xs text-slate-500">Time Slot</p>
                 <div className="flex items-center gap-1">
-                  <Thermometer className="h-3 w-3 text-slate-400" />
+                  <Clock className="h-3 w-3 text-slate-400" />
                   <p className="text-sm font-medium text-slate-900">
-                    {pkg?.acType || "N/A"}
+                    {formatTime(pkg.checkInTime)} - {formatTime(pkg.checkOutTime)}
                   </p>
                 </div>
               </div>
-              <div>
-                <p className="text-xs text-slate-500">Price</p>
-                <p className="text-lg font-bold text-slate-900">
-                  LKR {pkg?.price?.toLocaleString()}
-                </p>
+            )}
+            <div>
+              <p className="text-xs text-slate-500">AC Type</p>
+              <div className="flex items-center gap-1">
+                <Thermometer className="h-3 w-3 text-slate-400" />
+                <p className="text-sm font-medium text-slate-900">{pkg?.acType || "N/A"}</p>
               </div>
+            </div>
+            <div>
+              <p className="text-xs text-slate-500">Price</p>
+              <p className="text-lg font-bold text-slate-900">
+                LKR {pkg?.price?.toLocaleString()}
+              </p>
             </div>
           </div>
-
-          {/* Hotel Info */}
-          {booking.hotel && (
-            <div className="flex items-start gap-3">
-              <div className="p-2 bg-green-50 rounded-lg">
-                <MapPin className="h-5 w-5 text-green-600" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-slate-900">
-                  {booking.hotel.name}
-                </p>
-                <p className="text-xs text-slate-500">
-                  {booking.hotel.location}
-                </p>
-              </div>
-            </div>
-          )}
-
-          {/* Action Feedback */}
-          {actionStatus && (
-            <div
-              className={`flex items-center gap-2 p-3 rounded-lg text-sm font-medium ${
-                actionStatus === "error"
-                  ? "bg-red-50 text-red-700"
-                  : actionStatus === "approved"
-                  ? "bg-green-50 text-green-700"
-                  : "bg-amber-50 text-amber-700"
-              }`}
-            >
-              {actionStatus === "error" ? (
-                <AlertCircle className="h-4 w-4" />
-              ) : (
-                <Check className="h-4 w-4" />
-              )}
-              {actionMessage}
-            </div>
-          )}
-
-          {/* Approve/Reject Buttons */}
-          {booking.status === "pending" && !actionStatus && (
-            <div className="flex gap-3 pt-2">
-              <button
-                onClick={handleApprove}
-                disabled={!!actionLoading}
-                className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
-              >
-                {actionLoading === "approve" ? (
-                  <>
-                    <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    Approving...
-                  </>
-                ) : (
-                  <>
-                    <Check className="h-4 w-4" />
-                    Approve
-                  </>
-                )}
-              </button>
-              <button
-                onClick={handleReject}
-                disabled={!!actionLoading}
-                className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
-              >
-                {actionLoading === "reject" ? (
-                  <>
-                    <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    Rejecting...
-                  </>
-                ) : (
-                  <>
-                    <X className="h-4 w-4" />
-                    Reject
-                  </>
-                )}
-              </button>
-            </div>
-          )}
         </div>
+
+        {/* Hotel Info */}
+        {booking.hotel && (
+          <div className="flex items-start gap-3">
+            <div className="p-2 bg-green-50 rounded-lg">
+              <MapPin className="h-5 w-5 text-green-600" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-slate-900">{booking.hotel.name}</p>
+              <p className="text-xs text-slate-500">{booking.hotel.location}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Action Feedback */}
+        {actionStatus && (
+          <Alert
+            variant={actionStatus === "error" ? "error" : actionStatus === "approved" ? "success" : "warning"}
+            className="font-medium"
+          >
+            {actionMessage}
+          </Alert>
+        )}
+
+        {/* Approve/Reject Buttons */}
+        {booking.status === "pending" && !actionStatus && (
+          <div className="flex gap-3 pt-2">
+            <Button
+              variant="success"
+              onClick={handleApprove}
+              disabled={!!actionLoading}
+              loading={actionLoading === "approve"}
+              className="flex-1"
+            >
+              {actionLoading !== "approve" && <Check className="h-4 w-4" />}
+              {actionLoading === "approve" ? "Approving..." : "Approve"}
+            </Button>
+            <Button
+              variant="danger"
+              onClick={handleReject}
+              disabled={!!actionLoading}
+              loading={actionLoading === "reject"}
+              className="flex-1"
+            >
+              {actionLoading !== "reject" && <X className="h-4 w-4" />}
+              {actionLoading === "reject" ? "Rejecting..." : "Reject"}
+            </Button>
+          </div>
+        )}
       </div>
-    </div>
+    </Modal>
   );
 };
 
