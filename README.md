@@ -1,12 +1,121 @@
-# React + Vite
+# Tripora Partner Dashboard
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Hotel owner management dashboard for the Tripora platform. Allows hotel partners to manage their property profile, rooms, and bookings.
 
-Currently, two official plugins are available:
+---
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Current Status
 
-## Expanding the ESLint configuration
+| Feature | Status |
+|---|---|
+| Partner login (token handoff from tripora-frontend) | Working |
+| Hotel profile management (name, images, location, contact, amenities, FAQs, policies) | Working |
+| Room management (add, edit, block/unblock, delete) | Working |
+| Bookings management (view, filter by status/date, booking detail modal) | Working |
+| Dashboard stats (total rooms, available, bookings, active) | Working |
+| Real-time notifications (new bookings via Socket.IO) | Working |
+| Analytics | Placeholder — not yet implemented |
+| Settings | Placeholder — not yet implemented |
+| Hotel registration (first-time setup) | Not yet implemented |
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+---
+
+## Auth Flow
+
+This dashboard has no standalone login form. Authentication is handled by a token handoff from **tripora-frontend**:
+
+1. Partner logs in at `http://localhost:5173/partner/join`
+2. tripora-frontend redirects to: `http://localhost:5175/login?token=<JWT>&user=<JSON>`
+3. Dashboard stores credentials as `ceylonstay_token` and `ceylonstay_user` in localStorage
+4. PrivateRoute validates token + `user.role === "partner"` on every route
+5. On logout, clears localStorage and redirects back to tripora-frontend login
+
+---
+
+## Tech Stack
+
+- **React 19** + Vite
+- **React Router DOM 7**
+- **Axios** — API calls via `src/api/axiosInstance.js` (auto-attaches Bearer token)
+- **Socket.IO Client** — real-time booking notifications
+- **Tailwind CSS v4** — with custom Tripora brand tokens
+- **react-datepicker** — date filtering in bookings
+
+---
+
+## Brand Tokens (Tailwind v4 `@theme`)
+
+| Token | Value | Usage |
+|---|---|---|
+| `primary` | `#D85A30` | Buttons, active nav, links |
+| `primary-dark` | `#A83D18` | Hover states |
+| `tint` | `#FFF5F1` | Light backgrounds, highlighted rows |
+| `surface` | `#F7F7F7` | Page background, input backgrounds |
+| `brand-border` | `#EBEBEB` | All borders |
+| `muted` | `#717171` | Secondary text, icons |
+| `font-sans` | Plus Jakarta Sans | Body text |
+| `font-display` | DM Serif Display | Headings |
+
+---
+
+## Project Structure
+
+```
+src/
+├── api/
+│   └── axiosInstance.js        — Axios with auth interceptor + 401 handler
+├── components/
+│   ├── Layout.jsx              — Sidebar + Topbar shell
+│   ├── Sidebar.jsx             — Navigation links, logout
+│   ├── Topbar.jsx              — Search bar, notification bell, user avatar
+│   ├── AddRoomModal.jsx        — Modal form to add a new room
+│   ├── RoomDetailsModal.jsx    — View/edit/delete room details
+│   ├── BookingDetailModal.jsx  — View full booking details
+│   ├── LocationPicker.jsx      — Map picker for hotel coordinates
+│   ├── PrivateRoute.jsx        — Auth guard (checks token + partner role)
+│   └── ui/
+│       ├── Button.jsx          — primary / secondary / danger / success / icon variants
+│       ├── Badge.jsx           — success / warning / danger / info / neutral / purple
+│       ├── StatCard.jsx        — Dashboard stat tiles
+│       ├── FormInput.jsx       — Labeled input with brand focus ring
+│       ├── FormSelect.jsx      — Labeled select
+│       ├── Modal.jsx           — Base modal wrapper
+│       ├── Alert.jsx           — Success / error alert banners
+│       ├── EmptyState.jsx      — Empty content placeholder
+│       ├── LoadingSpinner.jsx  — Centered spinner
+│       ├── PageHeader.jsx      — Page title + subtitle + action slot
+│       └── ToggleChip.jsx      — Toggle chip for amenity/activity selection
+├── context/
+│   ├── AuthContext.jsx         — Auth state (reads from localStorage)
+│   └── NotificationContext.jsx — Socket.IO connection + notification state
+├── pages/
+│   ├── Login.jsx               — Token reception page (no login form)
+│   ├── Dashboard.jsx           — Stats overview + recent bookings + quick actions
+│   ├── HotelProfile.jsx        — 7-tab hotel editor
+│   ├── Rooms.jsx               — Room grid with search/filter, add/edit/block/delete
+│   ├── Bookings.jsx            — Bookings table with filters, pagination, detail modal
+│   ├── Analytics.jsx           — Placeholder
+│   └── Settings.jsx            — Placeholder
+└── index.css                   — Tailwind v4 @theme tokens + global styles
+```
+
+---
+
+## Environment Variables
+
+```env
+VITE_API_URL=http://localhost:5000/api
+VITE_SOCKET_URL=http://localhost:5000
+VITE_APP_URL=http://localhost:5173
+```
+
+---
+
+## Getting Started
+
+```bash
+npm install
+npm run dev   # runs on http://localhost:5175
+```
+
+Backend must be running at `http://localhost:5000` with CORS allowing `http://localhost:5175`.

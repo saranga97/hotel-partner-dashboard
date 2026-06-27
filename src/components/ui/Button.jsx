@@ -1,9 +1,9 @@
 const variants = {
-  primary: "bg-blue-600 hover:bg-blue-700 text-white",
-  secondary: "border border-slate-300 text-slate-700 hover:bg-slate-50",
+  primary: "bg-primary hover:bg-primary-dark text-white",
+  secondary: "border border-brand-border text-slate-700 hover:bg-surface",
   danger: "bg-red-600 hover:bg-red-700 text-white",
   success: "bg-green-600 hover:bg-green-700 text-white",
-  icon: "p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg",
+  icon: "p-2 text-muted hover:text-slate-600 hover:bg-surface rounded-lg",
 };
 
 const sizes = {

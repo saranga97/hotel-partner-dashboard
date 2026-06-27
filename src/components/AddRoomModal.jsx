@@ -185,7 +185,7 @@ const AddRoomModal = ({ isOpen, onClose, hotelId, onRoomAdded }) => {
   const getSubmitButtonStyle = () => {
     if (submitStatus === "success") return "bg-green-600 hover:bg-green-700";
     if (submitStatus === "error") return "bg-red-600 hover:bg-red-700";
-    return "bg-blue-600 hover:bg-blue-700";
+    return "bg-primary hover:bg-primary-dark";
   };
 
   return (
@@ -248,7 +248,7 @@ const AddRoomModal = ({ isOpen, onClose, hotelId, onRoomAdded }) => {
                   min="0"
                   value={count}
                   onChange={(e) => handleBedTypeChange(type, e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-center"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-center"
                 />
               </div>
             ))}
@@ -256,10 +256,10 @@ const AddRoomModal = ({ isOpen, onClose, hotelId, onRoomAdded }) => {
         </div>
 
         {/* Night Stay Section */}
-        <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+        <div className="p-4 bg-tint rounded-lg border border-brand-border">
           <div className="flex items-center gap-2 mb-3">
-            <Clock className="h-4 w-4 text-blue-600" />
-            <h3 className="text-sm font-semibold text-blue-900">Night Stay (Per Night)</h3>
+            <Clock className="h-4 w-4 text-primary" />
+            <h3 className="text-sm font-semibold text-primary-dark">Night Stay (Per Night)</h3>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <FormInput
@@ -332,7 +332,7 @@ const AddRoomModal = ({ isOpen, onClose, hotelId, onRoomAdded }) => {
               onChange={(e) => setCustomAmenity(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCustomAmenity(); } }}
               placeholder="Add custom amenity..."
-              className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
             />
             <Button variant="secondary" size="sm" onClick={addCustomAmenity}>Add</Button>
           </div>
@@ -345,7 +345,7 @@ const AddRoomModal = ({ isOpen, onClose, hotelId, onRoomAdded }) => {
             <button
               type="button"
               onClick={addPackage}
-              className="inline-flex items-center text-sm text-blue-600 hover:text-blue-700 font-medium"
+              className="inline-flex items-center text-sm text-primary hover:text-primary-dark font-medium"
             >
               <Plus className="h-4 w-4 mr-1" />
               Add Package
@@ -396,7 +396,7 @@ const AddRoomModal = ({ isOpen, onClose, hotelId, onRoomAdded }) => {
           <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
             {previews.map((src, index) => (
               <div key={index} className="relative group aspect-square">
-                <img src={src} alt={`Room ${index + 1}`} className="w-full h-full object-cover rounded-lg border border-slate-200" />
+                <img src={src} alt={`Room ${index + 1}`} className="w-full h-full object-cover rounded-lg border border-brand-border" />
                 <button
                   type="button"
                   onClick={() => removeImage(index)}
@@ -407,7 +407,7 @@ const AddRoomModal = ({ isOpen, onClose, hotelId, onRoomAdded }) => {
               </div>
             ))}
             {images.length < 7 && (
-              <label className="aspect-square flex flex-col items-center justify-center border-2 border-dashed border-slate-300 rounded-lg cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition-colors">
+              <label className="aspect-square flex flex-col items-center justify-center border-2 border-dashed border-slate-300 rounded-lg cursor-pointer hover:border-primary hover:bg-tint transition-colors">
                 <Upload className="h-6 w-6 text-slate-400 mb-1" />
                 <span className="text-xs text-slate-500">Upload</span>
                 <input type="file" accept="image/*" multiple onChange={handleImageChange} className="hidden" />
@@ -423,7 +423,7 @@ const AddRoomModal = ({ isOpen, onClose, hotelId, onRoomAdded }) => {
         </div>
 
         {/* Submit */}
-        <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
+        <div className="flex justify-end gap-3 pt-4 border-t border-brand-border">
           <Button variant="secondary" onClick={onClose}>Cancel</Button>
           <button
             type="submit"

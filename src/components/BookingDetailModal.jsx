@@ -85,7 +85,7 @@ const BookingDetailModal = ({ booking, onClose, onStatusChange }) => {
   return (
     <Modal isOpen={true} onClose={onClose} maxWidth="max-w-lg">
       {/* Header */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
+      <div className="flex items-center justify-between px-6 py-4 border-b border-brand-border">
         <div className="flex items-center gap-3">
           <h2 className="text-lg font-bold text-slate-900">Booking Details</h2>
           <Badge variant={getStatusVariant(currentStatus)}>
@@ -104,8 +104,8 @@ const BookingDetailModal = ({ booking, onClose, onStatusChange }) => {
       <div className="overflow-y-auto p-6 space-y-5">
         {/* Room Info */}
         <div className="flex items-start gap-3">
-          <div className="p-2 bg-blue-50 rounded-lg">
-            <BedDouble className="h-5 w-5 text-blue-600" />
+          <div className="p-2 bg-tint rounded-lg">
+            <BedDouble className="h-5 w-5 text-primary" />
           </div>
           <div>
             <p className="text-sm font-medium text-slate-900">
@@ -163,7 +163,7 @@ const BookingDetailModal = ({ booking, onClose, onStatusChange }) => {
         </div>
 
         {/* Package Details */}
-        <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
+        <div className="p-4 bg-surface rounded-xl border border-brand-border space-y-3">
           <h3 className="text-sm font-semibold text-slate-700">Package Details</h3>
           <div className="grid grid-cols-2 gap-3">
             <div>

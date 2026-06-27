@@ -113,7 +113,7 @@ const Bookings = () => {
   };
 
   const bookingStats = [
-    { label: "Total Bookings", value: stats.total, color: "bg-blue-500" },
+    { label: "Total Bookings", value: stats.total, color: "bg-primary" },
     { label: "Pending", value: stats.pending, color: "bg-amber-500" },
     { label: "Approved", value: stats.booked, color: "bg-green-500" },
     { label: "Cancelled", value: stats.cancelled, color: "bg-red-500" },
@@ -131,7 +131,7 @@ const Bookings = () => {
       </div>
 
       {/* Search and Filters */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+      <div className="bg-white rounded-xl shadow-sm border border-brand-border p-6">
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="flex-1">
             <div className="relative">
@@ -141,7 +141,7 @@ const Bookings = () => {
                 placeholder="Search by guest name..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full pl-10 pr-4 py-2 border border-brand-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
               />
             </div>
           </div>
@@ -152,7 +152,7 @@ const Bookings = () => {
                 setStatusFilter(e.target.value);
                 setPage(1);
               }}
-              className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="px-3 py-2 border border-brand-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
             >
               <option value="all">All Status</option>
               <option value="pending">Pending</option>
@@ -166,7 +166,7 @@ const Bookings = () => {
                 setDateFilter(e.target.value);
                 setPage(1);
               }}
-              className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="px-3 py-2 border border-brand-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
             />
             {dateFilter && (
               <Button variant="secondary" size="sm" onClick={() => setDateFilter("")}>
@@ -182,11 +182,11 @@ const Bookings = () => {
 
       {/* Bookings List */}
       {loading ? (
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-12">
+        <div className="bg-white rounded-xl shadow-sm border border-brand-border p-12">
           <LoadingSpinner message="Loading bookings..." />
         </div>
       ) : bookings.length === 0 ? (
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-12">
+        <div className="bg-white rounded-xl shadow-sm border border-brand-border p-12">
           <EmptyState
             icon={Calendar}
             message="No bookings found"
@@ -198,9 +198,9 @@ const Bookings = () => {
           />
         </div>
       ) : (
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        <div className="bg-white rounded-xl shadow-sm border border-brand-border overflow-hidden">
           {/* Table Header */}
-          <div className="hidden md:grid grid-cols-14 gap-3 px-6 py-3 bg-slate-50 border-b border-slate-200 text-xs font-medium text-slate-500 uppercase tracking-wider"
+          <div className="hidden md:grid grid-cols-14 gap-3 px-6 py-3 bg-surface border-b border-brand-border text-xs font-medium text-slate-500 uppercase tracking-wider"
                style={{ gridTemplateColumns: 'repeat(14, minmax(0, 1fr))' }}>
             <div className="col-span-2">Room</div>
             <div className="col-span-3">Guest</div>
@@ -218,7 +218,7 @@ const Bookings = () => {
               <div
                 key={booking._id}
                 onClick={() => setSelectedBooking(booking)}
-                className={`grid grid-cols-1 md:grid-cols-14 gap-2 md:gap-3 px-6 py-3 hover:bg-slate-50 transition-colors cursor-pointer ${
+                className={`grid grid-cols-1 md:grid-cols-14 gap-2 md:gap-3 px-6 py-3 hover:bg-surface transition-colors cursor-pointer ${
                   booking.status === "pending"
                     ? "border-l-4 border-l-amber-400"
                     : ""
@@ -252,7 +252,7 @@ const Bookings = () => {
                       className="w-7 h-7 rounded-full object-cover flex-shrink-0"
                     />
                   ) : (
-                    <div className="w-7 h-7 rounded-full bg-slate-200 flex items-center justify-center flex-shrink-0">
+                    <div className="w-7 h-7 rounded-full bg-brand-border flex items-center justify-center flex-shrink-0">
                       <User className="h-3.5 w-3.5 text-slate-500" />
                     </div>
                   )}
@@ -322,7 +322,7 @@ const Bookings = () => {
 
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="flex items-center justify-between px-6 py-3 border-t border-slate-200 bg-slate-50">
+            <div className="flex items-center justify-between px-6 py-3 border-t border-brand-border bg-surface">
               <p className="text-sm text-slate-600">
                 Page {page} of {totalPages}
               </p>

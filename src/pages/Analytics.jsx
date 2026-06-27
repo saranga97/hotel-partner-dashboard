@@ -7,9 +7,9 @@ const Analytics = () => {
       icon: BarChart3,
       title: "Revenue Analytics",
       description: "Track income, expenses, and profit margins",
-      color: "bg-blue-500",
-      lightColor: "bg-blue-50",
-      textColor: "text-blue-600"
+      color: "bg-tint0",
+      lightColor: "bg-tint",
+      textColor: "text-primary"
     },
     {
       icon: Users,
@@ -40,7 +40,7 @@ const Analytics = () => {
   const timeframes = ["Daily", "Weekly", "Monthly", "Quarterly", "Yearly"];
 
   const quickStats = [
-    { icon: DollarSign, value: "$45,231", label: "Revenue", trend: "↑ 12.5%", trendColor: "text-green-600", lightColor: "bg-blue-50", textColor: "text-blue-600" },
+    { icon: DollarSign, value: "$45,231", label: "Revenue", trend: "↑ 12.5%", trendColor: "text-green-600", lightColor: "bg-tint", textColor: "text-primary" },
     { icon: Activity, value: "78.4%", label: "Occupancy Rate", trend: "↑ 5.2%", trendColor: "text-green-600", lightColor: "bg-green-50", textColor: "text-green-600" },
     { icon: TrendingUp, value: "$156", label: "Avg. Daily Rate", trend: "↓ 2.1%", trendColor: "text-red-600", lightColor: "bg-purple-50", textColor: "text-purple-600" },
     { icon: Users, value: "4.8", label: "Guest Satisfaction", trend: "↑ 0.3", trendColor: "text-green-600", lightColor: "bg-orange-50", textColor: "text-orange-600" },
@@ -49,7 +49,7 @@ const Analytics = () => {
   return (
     <div className="space-y-6">
       <PageHeader title="Analytics & Reports" subtitle="Comprehensive insights into your hotel's performance">
-        <select className="px-4 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+        <select className="px-4 py-2 border border-brand-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary bg-white">
           <option>Last 30 days</option>
           <option>Last 3 months</option>
           <option>Last 6 months</option>
@@ -62,7 +62,7 @@ const Analytics = () => {
         {quickStats.map((stat, index) => {
           const Icon = stat.icon;
           return (
-            <div key={index} className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+            <div key={index} className="bg-white rounded-xl shadow-sm border border-brand-border p-6">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-slate-600">{stat.label}</p>
@@ -83,7 +83,7 @@ const Analytics = () => {
         {reportTypes.map((report, index) => {
           const Icon = report.icon;
           return (
-            <div key={index} className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 hover:shadow-md transition-shadow duration-200">
+            <div key={index} className="bg-white rounded-xl shadow-sm border border-brand-border p-6 hover:shadow-md transition-shadow duration-200">
               <div className="flex items-start space-x-4">
                 <div className={`p-3 rounded-lg ${report.lightColor}`}>
                   <Icon className={`h-6 w-6 ${report.textColor}`} />
@@ -102,7 +102,7 @@ const Analytics = () => {
       </div>
 
       {/* Time Period Selector */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+      <div className="bg-white rounded-xl shadow-sm border border-brand-border p-6">
         <h3 className="text-lg font-semibold text-slate-900 mb-4">Report Timeframes</h3>
         <div className="flex flex-wrap gap-3">
           {timeframes.map((timeframe, index) => (
@@ -110,7 +110,7 @@ const Analytics = () => {
               key={index}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 ${
                 index === 2
-                  ? "bg-blue-100 text-blue-700 border border-blue-200"
+                  ? "bg-blue-100 text-primary-dark border border-blue-200"
                   : "bg-slate-100 text-slate-700 hover:bg-slate-200"
               }`}
             >
@@ -121,7 +121,7 @@ const Analytics = () => {
       </div>
 
       {/* Main Chart Area */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 lg:p-8">
+      <div className="bg-white rounded-xl shadow-sm border border-brand-border p-6 lg:p-8">
         <div className="text-center py-16">
           <BarChart3 className="h-16 w-16 text-slate-400 mx-auto mb-6" />
           <h3 className="text-xl font-semibold text-slate-900 mb-2">Advanced Analytics Dashboard</h3>
@@ -130,10 +130,10 @@ const Analytics = () => {
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-2xl mx-auto mt-8">
-            <div className="p-4 bg-blue-50 rounded-lg">
-              <BarChart3 className="h-8 w-8 text-blue-600 mx-auto mb-2" />
-              <h4 className="font-medium text-blue-900">Revenue Charts</h4>
-              <p className="text-sm text-blue-700 mt-1">Daily, weekly, monthly trends</p>
+            <div className="p-4 bg-tint rounded-lg">
+              <BarChart3 className="h-8 w-8 text-primary mx-auto mb-2" />
+              <h4 className="font-medium text-primary-dark">Revenue Charts</h4>
+              <p className="text-sm text-primary-dark mt-1">Daily, weekly, monthly trends</p>
             </div>
             <div className="p-4 bg-green-50 rounded-lg">
               <PieChart className="h-8 w-8 text-green-600 mx-auto mb-2" />
@@ -147,7 +147,7 @@ const Analytics = () => {
             </div>
           </div>
 
-          <div className="mt-8 p-4 bg-slate-50 rounded-lg border-2 border-dashed border-slate-300">
+          <div className="mt-8 p-4 bg-surface rounded-lg border-2 border-dashed border-brand-border">
             <p className="text-slate-600 font-medium">Interactive Charts Coming Soon</p>
             <p className="text-slate-500 text-sm mt-1">Visual graphs and detailed reports with export capabilities</p>
           </div>
