@@ -8,9 +8,9 @@ const LoadingSpinner = ({ size = "md", className = "", message }) => {
   return (
     <div className={`flex flex-col items-center justify-center ${className}`}>
       <div
-        className={`animate-spin ${sizes[size] || sizes.md} border-blue-500 border-t-transparent rounded-full`}
+        className={`animate-spin ${sizes[size] || sizes.md} border-primary border-t-transparent rounded-full`}
       />
-      {message && <p className="text-slate-600 mt-4">{message}</p>}
+      {message && <p className="text-muted mt-4">{message}</p>}
     </div>
   );
 };

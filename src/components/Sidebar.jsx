@@ -27,8 +27,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
   const handleLogout = () => {
     localStorage.removeItem("ceylonstay_token");
     localStorage.removeItem("ceylonstay_user");
-    window.location.href = `${import.meta.env.VITE_APP_URL}/login`
-    // navigate("/login");
+    window.location.href = `${import.meta.env.VITE_APP_URL}/login`;
   };
 
   const isActive = (path) => location.pathname === path;
@@ -45,34 +44,34 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
 
       {/* Sidebar */}
       <div
-        className={`fixed top-0 left-0 z-50 h-full w-64 bg-white border-r border-slate-200 shadow-xl transition-transform duration-300 ${
+        className={`fixed top-0 left-0 z-50 h-full w-64 bg-white border-r border-brand-border shadow-xl transition-transform duration-300 ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         } lg:translate-x-0 lg:shadow-none`}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-5 border-b border-slate-200">
+        <div className="flex items-center justify-between px-6 py-5 border-b border-brand-border">
           <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
+            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
               <Hotel className="h-5 w-5 text-white" />
             </div>
-            <div className="text-xl font-bold bg-gradient-to-r from-blue-600 to-blue-700 bg-clip-text text-transparent">
-              CeylonStay
+            <div className="text-xl font-bold text-primary font-display">
+              Tripora
             </div>
           </div>
           <button
             onClick={() => setSidebarOpen(false)}
-            className="lg:hidden p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors duration-200"
+            className="lg:hidden p-1.5 rounded-lg text-muted hover:text-slate-600 hover:bg-surface transition-colors duration-200"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 px-4 py-6 space-y-2">
+        <nav className="flex-1 px-3 py-5 space-y-1">
           {links.map((link) => {
             const Icon = link.icon;
             const active = isActive(link.path);
-            
+
             return (
               <button
                 key={link.name}
@@ -80,29 +79,26 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
                   navigate(link.path);
                   setSidebarOpen(false);
                 }}
-                className={`flex items-center space-x-3 w-full px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ${
+                className={`flex items-center gap-3 w-full px-4 py-2.5 text-sm font-medium rounded-xl transition-all duration-200 ${
                   active
-                    ? "bg-blue-50 text-blue-700 border-r-2 border-blue-600"
-                    : "text-slate-700 hover:bg-slate-50 hover:text-slate-900"
+                    ? "bg-primary text-white shadow-sm"
+                    : "text-slate-600 hover:bg-surface hover:text-slate-900"
                 }`}
               >
-                <Icon className={`h-5 w-5 ${active ? "text-blue-600" : "text-slate-500"}`} />
+                <Icon className={`h-5 w-5 shrink-0 ${active ? "text-white" : "text-muted"}`} />
                 <span>{link.name}</span>
-                {active && (
-                  <div className="ml-auto w-2 h-2 bg-blue-600 rounded-full"></div>
-                )}
               </button>
             );
           })}
         </nav>
 
-        {/* User section */}
-        <div className="px-4 py-4 border-t border-slate-200">
+        {/* Logout */}
+        <div className="px-3 py-4 border-t border-brand-border">
           <button
             onClick={handleLogout}
-            className="flex items-center space-x-3 w-full px-3 py-2.5 text-sm font-medium text-slate-700 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200"
+            className="flex items-center gap-3 w-full px-4 py-2.5 text-sm font-medium text-slate-600 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors duration-200"
           >
-            <LogOut className="h-5 w-5" />
+            <LogOut className="h-5 w-5 shrink-0" />
             <span>Logout</span>
           </button>
         </div>

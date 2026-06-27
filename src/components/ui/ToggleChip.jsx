@@ -6,7 +6,7 @@ const ToggleChip = ({
   onToggle,
   removable = false,
   onRemove,
-  selectedColor = "bg-blue-100 text-blue-800 border-blue-300",
+  selectedColor = "bg-tint text-primary-dark border-primary",
   className = "",
 }) => {
   if (removable) {
@@ -33,7 +33,7 @@ const ToggleChip = ({
       className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors border ${
         selected
           ? selectedColor
-          : "bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200"
+          : "bg-surface text-slate-600 border-brand-border hover:bg-[#EBEBEB]"
       } ${className}`}
     >
       {label}

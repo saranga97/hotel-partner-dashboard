@@ -1,20 +1,30 @@
-@import "tailwindcss/preflight";
-@tailwind utilities;
 @import "tailwindcss";
-@import "@fontsource/inter";
 
-/* Custom animations */
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+/*
+ * Theme tokens — values defined in src/constants/colors.js + src/constants/fonts.js
+ * Tailwind v4 uses CSS-first config so @theme is kept manually in sync with those files.
+ * For JS use (toast, charts, inline styles) import directly from the constants files.
+ * To change the brand: update src/constants/colors.js first, then mirror here.
+ */
+@theme {
+  /* Brand — mirrors colors.js */
+  --color-primary:      #D85A30;
+  --color-primary-dark: #A83D18;
+  --color-tint:         #FFF5F1;
+  --color-muted:        #717171;
+  --color-surface:      #F7F7F7;
+  --color-brand-border: #EBEBEB;
+
+  /* Typography — mirrors fonts.js */
+  --font-sans:    "Plus Jakarta Sans", sans-serif;
+  --font-display: "DM Serif Display", serif;
 }
 
 body {
-  font-family: 'Inter', sans-serif;
-  background-color: #f9fafb; /* Light gray background */
+  font-family: "Plus Jakarta Sans", sans-serif;
+  background-color: #F7F7F7;
 }
 
-/* Pointer cursor for all clickable elements */
 button,
 a,
 [role="button"],
@@ -25,75 +35,6 @@ summary {
   cursor: pointer;
 }
 
-.animate-fadeIn {
-  animation: fadeIn 0.3s ease-in-out;
-}
-
-/* Custom styles for DatePicker */
-.react-datepicker-wrapper {
-  width: 100%;
-}
-
-.react-datepicker {
-  font-family: system-ui, -apple-system, sans-serif;
-  border-radius: 0.5rem;
-  border: 1px solid #e5e7eb;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-}
-
-.react-datepicker__header {
-  background-color: #f3f4f6;
-  border-bottom: 1px solid #e5e7eb;
-  border-top-left-radius: 0.5rem;
-  border-top-right-radius: 0.5rem;
-  padding-top: 8px;
-}
-
-.react-datepicker__day--selected,
-.react-datepicker__day--in-selecting-range,
-.react-datepicker__day--in-range {
-  background-color: #2563eb;
-  border-radius: 50%;
-}
-
-.react-datepicker__day--keyboard-selected {
-  background-color: #93c5fd;
-  border-radius: 50%;
-}
-
-.react-datepicker__day:hover {
-  border-radius: 50%;
-}
-
-.react-datepicker__day--in-selecting-range:not(.react-datepicker__day--in-range) {
-  background-color: rgba(37, 99, 235, 0.5);
-}
-
-.react-datepicker__day--outside-month {
-  color: #9ca3af;
-}
-
-/* Custom scrollbar */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-::-webkit-scrollbar-track {
-  background: #f1f1f1;
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #a1a1a1;
-}
-
-/* Custom animations */
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
@@ -103,14 +44,58 @@ summary {
   animation: fadeIn 0.3s ease-in-out;
 }
 
-/* Custom scrollbar */
+/* DatePicker */
+.react-datepicker-wrapper {
+  width: 100%;
+}
+
+.react-datepicker {
+  font-family: "Plus Jakarta Sans", system-ui, sans-serif;
+  border-radius: 0.5rem;
+  border: 1px solid #EBEBEB;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.react-datepicker__header {
+  background-color: #FFF5F1;
+  border-bottom: 1px solid #EBEBEB;
+  border-top-left-radius: 0.5rem;
+  border-top-right-radius: 0.5rem;
+  padding-top: 8px;
+}
+
+.react-datepicker__day--selected,
+.react-datepicker__day--in-selecting-range,
+.react-datepicker__day--in-range {
+  background-color: #D85A30;
+  border-radius: 50%;
+}
+
+.react-datepicker__day--keyboard-selected {
+  background-color: #f0a882;
+  border-radius: 50%;
+}
+
+.react-datepicker__day:hover {
+  border-radius: 50%;
+}
+
+.react-datepicker__day--in-selecting-range:not(.react-datepicker__day--in-range) {
+  background-color: rgba(216, 90, 48, 0.5);
+}
+
+.react-datepicker__day--outside-month {
+  color: #9ca3af;
+}
+
+/* Scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #f1f1f1;
+  background: #F7F7F7;
   border-radius: 4px;
 }
 

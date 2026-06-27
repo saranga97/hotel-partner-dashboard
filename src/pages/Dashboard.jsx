@@ -50,8 +50,8 @@ const Dashboard = () => {
       title: "Total Rooms",
       value: stats?.totalRooms || 0,
       icon: BedDouble,
-      lightColor: "bg-blue-50",
-      textColor: "text-blue-600",
+      lightColor: "bg-tint",
+      textColor: "text-primary",
     },
     {
       title: "Available Rooms",
@@ -99,7 +99,7 @@ const Dashboard = () => {
 
       {/* Room Type Breakdown */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+        <div className="bg-white rounded-xl shadow-sm border border-brand-border p-5">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-green-50 rounded-lg">
               <Users className="h-5 w-5 text-green-600" />
@@ -112,7 +112,7 @@ const Dashboard = () => {
             </div>
           </div>
         </div>
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+        <div className="bg-white rounded-xl shadow-sm border border-brand-border p-5">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-purple-50 rounded-lg">
               <Users className="h-5 w-5 text-purple-600" />
@@ -125,7 +125,7 @@ const Dashboard = () => {
             </div>
           </div>
         </div>
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+        <div className="bg-white rounded-xl shadow-sm border border-brand-border p-5">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-red-50 rounded-lg">
               <Ban className="h-5 w-5 text-red-600" />
@@ -143,7 +143,7 @@ const Dashboard = () => {
       {/* Recent Activity + Quick Actions */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Recent Bookings */}
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+        <div className="bg-white rounded-xl shadow-sm border border-brand-border p-6">
           <h3 className="text-lg font-semibold text-slate-900 mb-4">
             Recent Bookings
           </h3>
@@ -205,7 +205,7 @@ const Dashboard = () => {
         </div>
 
         {/* Quick Actions */}
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+        <div className="bg-white rounded-xl shadow-sm border border-brand-border p-6">
           <h3 className="text-lg font-semibold text-slate-900 mb-4">
             Quick Actions
           </h3>
@@ -228,15 +228,15 @@ const Dashboard = () => {
             </button>
             <button
               onClick={() => navigate("/bookings")}
-              className="w-full text-left px-4 py-3 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors duration-200"
+              className="w-full text-left px-4 py-3 bg-tint hover:bg-[#ffe8df] rounded-lg transition-colors duration-200"
             >
               <div className="flex items-center gap-3">
-                <Calendar className="h-5 w-5 text-blue-600" />
+                <Calendar className="h-5 w-5 text-primary" />
                 <div>
-                  <div className="text-sm font-medium text-blue-900">
+                  <div className="text-sm font-medium text-primary-dark">
                     View Bookings
                   </div>
-                  <div className="text-xs text-blue-700 mt-0.5">
+                  <div className="text-xs text-primary mt-0.5">
                     Manage all reservations
                   </div>
                 </div>

@@ -56,20 +56,20 @@ const Topbar = ({ setSidebarOpen }) => {
   };
 
   const getNotificationColors = (type) => {
-    if (type === "new_booking") return "bg-blue-100 text-blue-600";
+    if (type === "new_booking") return "bg-tint text-primary";
     if (type === "room_added") return "bg-green-100 text-green-600";
     if (type === "room_updated") return "bg-amber-100 text-amber-600";
-    return "bg-slate-100 text-slate-600";
+    return "bg-surface text-slate-600";
   };
 
   return (
-    <div className="sticky top-0 z-30 bg-white border-b border-slate-200 shadow-sm">
+    <div className="sticky top-0 z-30 bg-white border-b border-brand-border shadow-sm">
       <div className="flex items-center justify-between px-4 sm:px-6 lg:px-8 py-4">
         {/* Left section */}
         <div className="flex items-center space-x-4">
           <button
             onClick={() => setSidebarOpen((prev) => !prev)}
-            className="lg:hidden p-2 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200"
+            className="lg:hidden p-2 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-surface focus:outline-none focus:ring-2 focus:ring-primary transition-colors duration-200"
           >
             <Menu className="h-5 w-5" />
           </button>
@@ -91,7 +91,7 @@ const Topbar = ({ setSidebarOpen }) => {
             <input
               type="text"
               placeholder="Search bookings, rooms, guests..."
-              className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-slate-50 hover:bg-white transition-colors duration-200"
+              className="w-full pl-10 pr-4 py-2 border border-brand-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-surface hover:bg-white transition-colors duration-200"
             />
           </div>
         </div>
@@ -101,7 +101,7 @@ const Topbar = ({ setSidebarOpen }) => {
           <div className="relative" ref={dropdownRef}>
             <button
               onClick={() => setShowNotifications(!showNotifications)}
-              className="relative p-2 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200"
+              className="relative p-2 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-surface focus:outline-none focus:ring-2 focus:ring-primary transition-colors duration-200"
             >
               <Bell className="h-5 w-5" />
               {unreadCount > 0 && (
@@ -112,7 +112,7 @@ const Topbar = ({ setSidebarOpen }) => {
             </button>
 
             {showNotifications && (
-              <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-xl border border-slate-200 overflow-hidden z-50">
+              <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-xl border border-brand-border overflow-hidden z-50">
                 <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
                   <h3 className="text-sm font-semibold text-slate-900">
                     Notifications
@@ -141,8 +141,8 @@ const Topbar = ({ setSidebarOpen }) => {
                       <button
                         key={notification.id}
                         onClick={() => handleNotificationClick(notification)}
-                        className={`w-full text-left px-4 py-3 hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0 ${
-                          !notification.read ? "bg-blue-50/50" : ""
+                        className={`w-full text-left px-4 py-3 hover:bg-surface transition-colors border-b border-brand-border last:border-0 ${
+                          !notification.read ? "bg-tint/50" : ""
                         }`}
                       >
                         <div className="flex items-start gap-3">
@@ -171,7 +171,7 @@ const Topbar = ({ setSidebarOpen }) => {
                             </p>
                           </div>
                           {!notification.read && (
-                            <div className="w-2 h-2 bg-blue-500 rounded-full mt-1.5 flex-shrink-0" />
+                            <div className="w-2 h-2 bg-primary rounded-full mt-1.5 flex-shrink-0" />
                           )}
                         </div>
                       </button>
@@ -182,7 +182,7 @@ const Topbar = ({ setSidebarOpen }) => {
             )}
           </div>
 
-          <div className="flex items-center space-x-3 pl-3 border-l border-slate-200">
+          <div className="flex items-center space-x-3 pl-3 border-l border-brand-border">
             <div className="hidden sm:block text-right">
               <div className="text-sm font-medium text-slate-900">
                 {hotelName}
@@ -190,7 +190,7 @@ const Topbar = ({ setSidebarOpen }) => {
               <div className="text-xs text-slate-600">{user?.user_id}</div>
             </div>
             <div className="relative">
-              <button className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full text-white flex items-center justify-center text-sm font-semibold shadow-md hover:shadow-lg transition-shadow duration-200">
+              <button className="w-8 h-8 bg-primary rounded-full text-white flex items-center justify-center text-sm font-semibold shadow-md hover:shadow-lg transition-shadow duration-200">
                 {hotelName.charAt(0).toUpperCase()}
               </button>
               <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-400 border-2 border-white rounded-full"></div>
