@@ -1,41 +1,41 @@
 import { useState, useEffect } from "react";
 import axiosInstance from "../api/axiosInstance";
-import LocationPicker from "../components/LocationPicker";
 import {
-  Building2, Image, MapPin, Phone, Coffee, HelpCircle, Shield,
-  Upload, X, Plus, Trash2, Save, Loader2, Check, AlertCircle,
+  Building2, Image, MapPin, Users, DollarSign, Coffee,
+  Upload, X, Save, Loader2, Check, AlertCircle, Camera,
 } from "lucide-react";
-import { PageHeader, FormInput, Alert, LoadingSpinner, EmptyState, Button, ToggleChip } from "../components/ui";
+import { PageHeader, FormInput, FormSelect, Alert, LoadingSpinner, Button, ToggleChip } from "../components/ui";
+import {
+  HOTEL_TYPES, PLACE_TYPES, BATHROOM_TYPES, BOOKING_METHODS, WHO_ELSE_OPTIONS,
+  COUNTRIES, PREDEFINED_AMENITIES,
+} from "../constants/hotel";
 
 const TABS = [
   { key: "overview", label: "Overview", icon: Building2 },
-  { key: "gallery", label: "Gallery", icon: Image },
   { key: "location", label: "Location", icon: MapPin },
-  { key: "contact", label: "Contact", icon: Phone },
-  { key: "facilities", label: "Facilities", icon: Coffee },
-  { key: "faqs", label: "FAQs", icon: HelpCircle },
-  { key: "policies", label: "Policies", icon: Shield },
+  { key: "guests", label: "Guest Experience", icon: Users },
+  { key: "pricing", label: "Pricing & Booking", icon: DollarSign },
+  { key: "amenities", label: "Amenities", icon: Coffee },
+  { key: "gallery", label: "Gallery", icon: Image },
 ];
 
-const PREDEFINED_AMENITIES = [
-  "Swimming Pool", "Spa", "Fitness Center", "Restaurant", "Bar",
-  "Room Service", "Free WiFi", "Free Parking", "Airport Shuttle",
-  "Laundry Service", "24-Hour Front Desk", "Concierge", "Garden",
-  "Terrace", "Library", "Business Center", "Meeting Rooms",
-  "Kids Play Area", "BBQ Facilities", "Bicycle Rental",
-];
+const MIN_GALLERY_IMAGES = 5;
 
-const PREDEFINED_ACTIVITIES = [
-  "Fitness Center", "Game Room", "Spa & Wellness", "Swimming",
-  "Yoga Classes", "Cooking Classes", "Guided Tours", "Water Sports",
-  "Hiking", "Cycling", "Tennis", "Billiards", "Fishing",
-];
+// Matches tripora-frontend's formatBasePrice — the backend stores basePrice as a
+// pre-formatted string (e.g. "13,500 LKR"), not a number.
+const formatBasePrice = (amount) => `${Number(amount).toLocaleString("en-LK")} LKR`;
+const parseBasePrice = (basePrice) => {
+  const parsed = parseFloat(String(basePrice || "").replace(/[^0-9.]/g, ""));
+  return isNaN(parsed) ? "" : parsed;
+};
 
-const POLICY_SUGGESTIONS = [
-  "Pet Policy", "Smoking Policy", "Cancellation Policy",
-  "Check-in / Check-out Policy", "Children & Extra Beds",
-  "Payment Policy", "Damage Policy",
-];
+const emptyFormState = {
+  name: "", description: "", hotelType: "", placeType: "", starRating: "",
+  country: "LK", streetAddress: "", apartmentNumber: "", city: "", province: "", postalCode: "", contactNumber: "",
+  bathroomType: "", whoElseIsThere: [], checkInTime: "14:00", checkOutTime: "12:00",
+  basePrice: "", bookingMethod: "INSTANT_BOOK",
+  amenities: [],
+};
 
 const HotelProfile = () => {
   const [hotel, setHotel] = useState(null);
@@ -44,31 +44,25 @@ const HotelProfile = () => {
   const [saving, setSaving] = useState(false);
   const [loadError, setLoadError] = useState("");
 
+  // Register-hotel form (shown when the partner has no hotel yet)
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState("");
+  const [createForm, setCreateForm] = useState(emptyFormState);
+  const [customAmenity, setCustomAmenity] = useState("");
+
   const [saveStatus, setSaveStatus] = useState(null);
   const [saveMessage, setSaveMessage] = useState("");
 
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
+  const [form, setForm] = useState(emptyFormState);
+  const setField = (field, value) => setForm((f) => ({ ...f, [field]: value }));
 
-  const [existingImages, setExistingImages] = useState([]);
-  const [newImages, setNewImages] = useState([]);
-  const [newPreviews, setNewPreviews] = useState([]);
+  const [existingProfileImage, setExistingProfileImage] = useState("");
+  const [existingGalleryImages, setExistingGalleryImages] = useState([]);
+  const [newProfileFile, setNewProfileFile] = useState(null);
+  const [newProfilePreview, setNewProfilePreview] = useState("");
+  const [newGalleryFiles, setNewGalleryFiles] = useState([]);
+  const [newGalleryPreviews, setNewGalleryPreviews] = useState([]);
   const [imageError, setImageError] = useState("");
-
-  const [address, setAddress] = useState("");
-  const [location, setLocation] = useState("");
-  const [coordinates, setCoordinates] = useState(null);
-
-  const [mobile, setMobile] = useState("");
-  const [email, setEmail] = useState("");
-
-  const [amenities, setAmenities] = useState([]);
-  const [customAmenity, setCustomAmenity] = useState("");
-  const [activities, setActivities] = useState([]);
-  const [customActivity, setCustomActivity] = useState("");
-
-  const [faqs, setFaqs] = useState([]);
-  const [policies, setPolicies] = useState([]);
 
   useEffect(() => {
     fetchHotel();
@@ -86,8 +80,8 @@ const HotelProfile = () => {
   const fetchHotel = async () => {
     try {
       const res = await axiosInstance.get("/hotels/my-hotels");
-      if (res.data.length > 0) {
-        const h = res.data[0];
+      if (res.data.hotels?.length > 0) {
+        const h = res.data.hotels[0];
         setHotel(h);
         populateState(h);
       }
@@ -99,18 +93,29 @@ const HotelProfile = () => {
   };
 
   const populateState = (h) => {
-    setName(h.name || "");
-    setDescription(h.description || "");
-    setExistingImages(h.images || []);
-    setAddress(h.address || "");
-    setLocation(h.location || "");
-    setCoordinates(h.coordinates || null);
-    setMobile(h.mobile || "");
-    setEmail(h.email || "");
-    setAmenities(h.amenities || []);
-    setActivities(h.activities || []);
-    setFaqs(h.faqs && h.faqs.length > 0 ? h.faqs : []);
-    setPolicies(h.policies && h.policies.length > 0 ? h.policies : []);
+    setForm({
+      name: h.name || "",
+      description: h.description || "",
+      hotelType: h.hotelType || "",
+      placeType: h.placeType || "",
+      starRating: h.starRating || "",
+      country: h.country || "LK",
+      streetAddress: h.streetAddress || "",
+      apartmentNumber: h.apartmentNumber || "",
+      city: h.city || "",
+      province: h.province || "",
+      postalCode: h.postalCode || "",
+      contactNumber: h.contactNumber || "",
+      bathroomType: h.bathroomType || "",
+      whoElseIsThere: h.whoElseIsThere || [],
+      checkInTime: h.checkInTime || "14:00",
+      checkOutTime: h.checkOutTime || "12:00",
+      basePrice: parseBasePrice(h.basePrice),
+      bookingMethod: h.bookingMethod || "INSTANT_BOOK",
+      amenities: h.amenities || [],
+    });
+    setExistingProfileImage(h.profileImage || "");
+    setExistingGalleryImages(h.images || []);
   };
 
   const saveSection = async (data) => {
@@ -118,128 +123,165 @@ const HotelProfile = () => {
     setSaving(true);
     setSaveStatus(null);
     try {
-      const res = await axiosInstance.put(
-        `/hotels/update-hotel/${hotel._id}`,
-        data,
-        data instanceof FormData
-          ? { headers: { "Content-Type": "multipart/form-data" } }
-          : {}
-      );
+      const res = await axiosInstance.put(`/hotels/${hotel.hotel_id}`, data);
       setHotel(res.data.hotel);
+      populateState(res.data.hotel);
       showSaveFeedback("success", "Saved successfully!");
     } catch (err) {
-      showSaveFeedback("error", err.response?.data?.message || "Failed to save");
+      showSaveFeedback("error", err.response?.data?.message || err.response?.data?.error || "Failed to save");
     } finally {
       setSaving(false);
     }
   };
 
-  const handleSaveOverview = () => saveSection({ name, description });
+  const handleSaveOverview = () => saveSection({
+    name: form.name, description: form.description, hotelType: form.hotelType,
+    placeType: form.placeType, starRating: form.starRating || undefined,
+  });
 
-  const handleSaveGallery = () => {
-    if (newImages.length === 0 && existingImages.length > 0) {
-      showSaveFeedback("info", "No new images to upload");
-      return;
-    }
-    const formData = new FormData();
-    newImages.forEach((file) => formData.append("images", file));
-    saveSection(formData);
-    newPreviews.forEach((p) => URL.revokeObjectURL(p));
-    setNewImages([]);
-    setNewPreviews([]);
-  };
+  const handleSaveLocation = () => saveSection({
+    country: form.country, streetAddress: form.streetAddress, apartmentNumber: form.apartmentNumber,
+    city: form.city, province: form.province, postalCode: form.postalCode, contactNumber: form.contactNumber,
+  });
 
-  const handleSaveLocation = () => {
-    saveSection({
-      location,
-      address,
-      coordinates: coordinates ? JSON.stringify(coordinates) : undefined,
-    });
-  };
+  const handleSaveGuests = () => saveSection({
+    bathroomType: form.bathroomType, whoElseIsThere: form.whoElseIsThere,
+    checkInTime: form.checkInTime, checkOutTime: form.checkOutTime,
+  });
 
-  const handleSaveContact = () => saveSection({ mobile, email });
+  const handleSavePricing = () => saveSection({
+    basePrice: formatBasePrice(form.basePrice), bookingMethod: form.bookingMethod,
+  });
 
-  const handleSaveFacilities = () => {
-    saveSection({
-      amenities: JSON.stringify(amenities),
-      activities: JSON.stringify(activities),
-    });
-  };
-
-  const handleSaveFaqs = () => {
-    const validFaqs = faqs.filter((f) => f.question.trim() && f.answer.trim());
-    saveSection({ faqs: JSON.stringify(validFaqs) });
-  };
-
-  const handleSavePolicies = () => {
-    const validPolicies = policies.filter((p) => p.title.trim() && p.description.trim());
-    saveSection({ policies: JSON.stringify(validPolicies) });
-  };
-
-  const handleNewImages = (e) => {
-    const files = Array.from(e.target.files);
-    const total = existingImages.length + newImages.length + files.length;
-    if (total > 10) {
-      setImageError("Maximum 10 images allowed");
-      setTimeout(() => setImageError(""), 3000);
-      return;
-    }
-    const previews = files.map((f) => URL.createObjectURL(f));
-    setNewImages((prev) => [...prev, ...files]);
-    setNewPreviews((prev) => [...prev, ...previews]);
-  };
-
-  const removeNewImage = (index) => {
-    URL.revokeObjectURL(newPreviews[index]);
-    setNewImages((prev) => prev.filter((_, i) => i !== index));
-    setNewPreviews((prev) => prev.filter((_, i) => i !== index));
-  };
+  const handleSaveAmenities = () => saveSection({ amenities: form.amenities });
 
   const toggleAmenity = (amenity) => {
-    setAmenities((prev) =>
-      prev.includes(amenity) ? prev.filter((a) => a !== amenity) : [...prev, amenity]
-    );
+    setField("amenities", form.amenities.includes(amenity)
+      ? form.amenities.filter((a) => a !== amenity)
+      : [...form.amenities, amenity]);
   };
 
   const addCustomAmenity = () => {
     const trimmed = customAmenity.trim();
-    if (trimmed && !amenities.includes(trimmed)) {
-      setAmenities((prev) => [...prev, trimmed]);
+    if (trimmed && !form.amenities.includes(trimmed)) {
+      setField("amenities", [...form.amenities, trimmed]);
       setCustomAmenity("");
     }
   };
 
-  const toggleActivity = (activity) => {
-    setActivities((prev) =>
-      prev.includes(activity) ? prev.filter((a) => a !== activity) : [...prev, activity]
-    );
+  const toggleWhoElse = (value) => {
+    setField("whoElseIsThere", form.whoElseIsThere.includes(value)
+      ? form.whoElseIsThere.filter((v) => v !== value)
+      : [...form.whoElseIsThere, value]);
   };
 
-  const addCustomActivity = () => {
-    const trimmed = customActivity.trim();
-    if (trimmed && !activities.includes(trimmed)) {
-      setActivities((prev) => [...prev, trimmed]);
-      setCustomActivity("");
+  const handleProfileFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setNewProfileFile(file);
+    setNewProfilePreview(URL.createObjectURL(file));
+  };
+
+  const handleGalleryFilesChange = (e) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    setNewGalleryFiles((prev) => [...prev, ...files]);
+    setNewGalleryPreviews((prev) => [...prev, ...files.map((f) => URL.createObjectURL(f))]);
+    e.target.value = "";
+  };
+
+  const removeGalleryFile = (index) => {
+    URL.revokeObjectURL(newGalleryPreviews[index]);
+    setNewGalleryFiles((prev) => prev.filter((_, i) => i !== index));
+    setNewGalleryPreviews((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleSaveGallery = async () => {
+    if (newGalleryFiles.length < MIN_GALLERY_IMAGES) {
+      setImageError(`Select at least ${MIN_GALLERY_IMAGES} gallery images to upload (this replaces the current gallery).`);
+      setTimeout(() => setImageError(""), 4000);
+      return;
+    }
+    setSaving(true);
+    setSaveStatus(null);
+    try {
+      const formData = new FormData();
+      if (newProfileFile) formData.append("profileImage", newProfileFile);
+      newGalleryFiles.forEach((f) => formData.append("images", f));
+      const res = await axiosInstance.put(`/hotels/${hotel.hotel_id}/images`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      setExistingProfileImage(res.data.profileImage || existingProfileImage);
+      setExistingGalleryImages(res.data.images || []);
+      newGalleryPreviews.forEach((p) => URL.revokeObjectURL(p));
+      if (newProfilePreview) URL.revokeObjectURL(newProfilePreview);
+      setNewGalleryFiles([]); setNewGalleryPreviews([]);
+      setNewProfileFile(null); setNewProfilePreview("");
+      showSaveFeedback("success", "Photos uploaded!");
+    } catch (err) {
+      showSaveFeedback("error", err.response?.data?.message || "Failed to upload photos");
+    } finally {
+      setSaving(false);
     }
   };
 
-  const addFaq = () => setFaqs((prev) => [...prev, { question: "", answer: "" }]);
-  const updateFaq = (index, field, value) => {
-    setFaqs((prev) => prev.map((f, i) => (i === index ? { ...f, [field]: value } : f)));
-  };
-  const removeFaq = (index) => setFaqs((prev) => prev.filter((_, i) => i !== index));
+  // ── Register-hotel form (no hotel yet) ──────────────────────────────
 
-  const addPolicy = (title = "") => {
-    setPolicies((prev) => [...prev, { title, description: "" }]);
-  };
-  const updatePolicy = (index, field, value) => {
-    setPolicies((prev) => prev.map((p, i) => (i === index ? { ...p, [field]: value } : p)));
-  };
-  const removePolicy = (index) => setPolicies((prev) => prev.filter((_, i) => i !== index));
+  const setCreateField = (field, value) => setCreateForm((f) => ({ ...f, [field]: value }));
 
-  const handleLocationSelect = (data) => {
-    setAddress(data.address);
-    setCoordinates(data.coordinates);
+  const toggleCreateWhoElse = (value) => {
+    setCreateField("whoElseIsThere", createForm.whoElseIsThere.includes(value)
+      ? createForm.whoElseIsThere.filter((v) => v !== value)
+      : [...createForm.whoElseIsThere, value]);
+  };
+
+  const toggleCreateAmenity = (amenity) => {
+    setCreateField("amenities", createForm.amenities.includes(amenity)
+      ? createForm.amenities.filter((a) => a !== amenity)
+      : [...createForm.amenities, amenity]);
+  };
+
+  const addCreateCustomAmenity = () => {
+    const trimmed = customAmenity.trim();
+    if (trimmed && !createForm.amenities.includes(trimmed)) {
+      setCreateField("amenities", [...createForm.amenities, trimmed]);
+      setCustomAmenity("");
+    }
+  };
+
+  const handleCreateHotel = async (e) => {
+    e.preventDefault();
+    setCreateError("");
+    if (!createForm.name.trim()) return setCreateError("Property name is required.");
+    if (!createForm.hotelType) return setCreateError("Select a property type.");
+    if (!createForm.placeType) return setCreateError("Select what guests will have.");
+    if (!createForm.streetAddress.trim()) return setCreateError("Street address is required.");
+    if (!createForm.city.trim()) return setCreateError("City is required.");
+    if (!createForm.bathroomType) return setCreateError("Select a bathroom type.");
+    if (createForm.whoElseIsThere.length === 0) return setCreateError("Select at least one option for who else might be there.");
+    if (!createForm.basePrice) return setCreateError("Enter a nightly price.");
+
+    setCreating(true);
+    try {
+      const payload = {
+        name: createForm.name, hotelType: createForm.hotelType, placeType: createForm.placeType,
+        starRating: createForm.starRating || undefined,
+        country: createForm.country, streetAddress: createForm.streetAddress,
+        apartmentNumber: createForm.apartmentNumber, city: createForm.city,
+        province: createForm.province, postalCode: createForm.postalCode, contactNumber: createForm.contactNumber,
+        bathroomType: createForm.bathroomType, whoElseIsThere: createForm.whoElseIsThere,
+        checkInTime: createForm.checkInTime, checkOutTime: createForm.checkOutTime,
+        basePrice: formatBasePrice(createForm.basePrice), bookingMethod: createForm.bookingMethod,
+        amenities: createForm.amenities, description: createForm.description,
+      };
+      const res = await axiosInstance.post("/hotels/register", payload);
+      setHotel(res.data.hotel);
+      populateState(res.data.hotel);
+    } catch (err) {
+      setCreateError(err.response?.data?.message || "Failed to create hotel. Please try again.");
+    } finally {
+      setCreating(false);
+    }
   };
 
   if (loading) {
@@ -255,66 +297,18 @@ const HotelProfile = () => {
     );
   }
 
-  if (!hotel) {
-    return (
-      <EmptyState
-        icon={Building2}
-        message="No Hotel Found"
-        description="You haven't registered a hotel yet."
-        className="py-20"
-      />
-    );
-  }
-
   const SaveButton = ({ onClick }) => {
     const getButtonContent = () => {
-      if (saving) {
-        return (
-          <>
-            <Loader2 className="h-4 w-4 animate-spin" />
-            Saving...
-          </>
-        );
-      }
-      if (saveStatus === "success") {
-        return (
-          <>
-            <Check className="h-4 w-4" />
-            {saveMessage}
-          </>
-        );
-      }
-      if (saveStatus === "error") {
-        return (
-          <>
-            <AlertCircle className="h-4 w-4" />
-            {saveMessage}
-          </>
-        );
-      }
-      if (saveStatus === "info") {
-        return (
-          <>
-            <AlertCircle className="h-4 w-4" />
-            {saveMessage}
-          </>
-        );
-      }
-      return (
-        <>
-          <Save className="h-4 w-4" />
-          Save Changes
-        </>
-      );
+      if (saving) return <><Loader2 className="h-4 w-4 animate-spin" />Saving...</>;
+      if (saveStatus === "success") return <><Check className="h-4 w-4" />{saveMessage}</>;
+      if (saveStatus === "error") return <><AlertCircle className="h-4 w-4" />{saveMessage}</>;
+      return <><Save className="h-4 w-4" />Save Changes</>;
     };
-
     const getButtonStyle = () => {
       if (saveStatus === "success") return "bg-green-600 hover:bg-green-700";
       if (saveStatus === "error") return "bg-red-600 hover:bg-red-700";
-      if (saveStatus === "info") return "bg-amber-600 hover:bg-amber-700";
       return "bg-blue-600 hover:bg-blue-700";
     };
-
     return (
       <button
         onClick={onClick}
@@ -326,11 +320,117 @@ const HotelProfile = () => {
     );
   };
 
+  if (!hotel) {
+    return (
+      <div className="max-w-2xl mx-auto py-12 px-4">
+        <div className="bg-white rounded-2xl border border-brand-border shadow-sm p-8">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-10 h-10 bg-tint rounded-xl flex items-center justify-center">
+              <Building2 className="h-5 w-5 text-primary" />
+            </div>
+            <h2 className="text-2xl font-bold text-slate-900 font-display">Register your hotel</h2>
+          </div>
+          <p className="text-muted text-sm mb-6">Add your property details to start receiving bookings.</p>
+
+          {createError && <Alert variant="error" className="mb-4">{createError}</Alert>}
+
+          <form onSubmit={handleCreateHotel} className="space-y-5">
+            <h3 className="text-sm font-semibold text-slate-700">Basics</h3>
+            <FormInput label="Property name" placeholder="e.g. Ocean View Resort" value={createForm.name} onChange={(e) => setCreateField("name", e.target.value)} required />
+            <div className="grid grid-cols-2 gap-4">
+              <FormSelect label="Property type" value={createForm.hotelType} onChange={(e) => setCreateField("hotelType", e.target.value)}>
+                <option value="">Select</option>
+                {HOTEL_TYPES.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </FormSelect>
+              <FormSelect label="Guests will have" value={createForm.placeType} onChange={(e) => setCreateField("placeType", e.target.value)}>
+                <option value="">Select</option>
+                {PLACE_TYPES.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </FormSelect>
+            </div>
+            <FormSelect label="Star rating (optional)" value={createForm.starRating} onChange={(e) => setCreateField("starRating", e.target.value)}>
+              <option value="">Not rated</option>
+              {[1, 2, 3, 4, 5].map((n) => <option key={n} value={n}>{n} star{n > 1 ? "s" : ""}</option>)}
+            </FormSelect>
+
+            <h3 className="text-sm font-semibold text-slate-700 pt-2">Location</h3>
+            <FormSelect label="Country" value={createForm.country} onChange={(e) => setCreateField("country", e.target.value)}>
+              {COUNTRIES.map((c) => <option key={c.iso} value={c.iso}>{c.name}</option>)}
+            </FormSelect>
+            <FormInput label="Street address" placeholder="123 Beach Road" value={createForm.streetAddress} onChange={(e) => setCreateField("streetAddress", e.target.value)} required />
+            <div className="grid grid-cols-2 gap-4">
+              <FormInput label="Apartment / unit (optional)" value={createForm.apartmentNumber} onChange={(e) => setCreateField("apartmentNumber", e.target.value)} />
+              <FormInput label="City" placeholder="Galle" value={createForm.city} onChange={(e) => setCreateField("city", e.target.value)} required />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <FormInput label="Province (optional)" value={createForm.province} onChange={(e) => setCreateField("province", e.target.value)} />
+              <FormInput label="Postal code (optional)" value={createForm.postalCode} onChange={(e) => setCreateField("postalCode", e.target.value)} />
+            </div>
+            <FormInput label="Contact number (optional)" placeholder="+94912234567" value={createForm.contactNumber} onChange={(e) => setCreateField("contactNumber", e.target.value)} />
+
+            <h3 className="text-sm font-semibold text-slate-700 pt-2">Guest experience</h3>
+            <FormSelect label="Bathroom" value={createForm.bathroomType} onChange={(e) => setCreateField("bathroomType", e.target.value)}>
+              <option value="">Select</option>
+              {BATHROOM_TYPES.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </FormSelect>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">Who else might be there</label>
+              <div className="flex flex-wrap gap-2">
+                {WHO_ELSE_OPTIONS.map((o) => (
+                  <ToggleChip key={o.value} label={o.label} selected={createForm.whoElseIsThere.includes(o.value)} onToggle={() => toggleCreateWhoElse(o.value)} />
+                ))}
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <FormInput label="Check-in time" type="time" value={createForm.checkInTime} onChange={(e) => setCreateField("checkInTime", e.target.value)} />
+              <FormInput label="Check-out time" type="time" value={createForm.checkOutTime} onChange={(e) => setCreateField("checkOutTime", e.target.value)} />
+            </div>
+
+            <h3 className="text-sm font-semibold text-slate-700 pt-2">Pricing & booking</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <FormInput label="Price per night (LKR)" type="number" min="0" placeholder="13500" value={createForm.basePrice} onChange={(e) => setCreateField("basePrice", e.target.value)} required />
+              <FormSelect label="Booking method" value={createForm.bookingMethod} onChange={(e) => setCreateField("bookingMethod", e.target.value)}>
+                {BOOKING_METHODS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </FormSelect>
+            </div>
+
+            <h3 className="text-sm font-semibold text-slate-700 pt-2">Amenities (optional)</h3>
+            <div className="flex flex-wrap gap-2 mb-2">
+              {PREDEFINED_AMENITIES.map((amenity) => (
+                <ToggleChip key={amenity} label={amenity} selected={createForm.amenities.includes(amenity)} onToggle={() => toggleCreateAmenity(amenity)} />
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <input
+                type="text" value={customAmenity} onChange={(e) => setCustomAmenity(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCreateCustomAmenity(); } }}
+                placeholder="Add custom amenity..."
+                className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+              <Button variant="secondary" size="sm" type="button" onClick={addCreateCustomAmenity}>Add</Button>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Description (optional)</label>
+              <textarea
+                value={createForm.description} onChange={(e) => setCreateField("description", e.target.value)}
+                rows={4} placeholder="Describe your hotel, its unique features, surroundings..."
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-y"
+              />
+            </div>
+
+            <Button type="submit" loading={creating} className="w-full" size="lg">
+              {creating ? "Creating..." : "Create Hotel"}
+            </Button>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <PageHeader title="Hotel Profile" subtitle="Manage your hotel information and settings" />
 
-      {/* Tabs */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200">
         <div className="border-b border-slate-200 overflow-x-auto">
           <div className="flex min-w-max">
@@ -355,404 +455,175 @@ const HotelProfile = () => {
         </div>
 
         <div className="p-6">
-          {/* Overview Tab */}
           {activeTab === "overview" && (
             <div className="space-y-5">
-              <FormInput
-                label="Hotel Name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-              />
+              <FormInput label="Property name" value={form.name} onChange={(e) => setField("name", e.target.value)} />
+              <div className="grid grid-cols-2 gap-4">
+                <FormSelect label="Property type" value={form.hotelType} onChange={(e) => setField("hotelType", e.target.value)}>
+                  {HOTEL_TYPES.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </FormSelect>
+                <FormSelect label="Guests will have" value={form.placeType} onChange={(e) => setField("placeType", e.target.value)}>
+                  {PLACE_TYPES.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </FormSelect>
+              </div>
+              <FormSelect label="Star rating (optional)" value={form.starRating} onChange={(e) => setField("starRating", e.target.value)}>
+                <option value="">Not rated</option>
+                {[1, 2, 3, 4, 5].map((n) => <option key={n} value={n}>{n} star{n > 1 ? "s" : ""}</option>)}
+              </FormSelect>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Hotel Description
-                </label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Description</label>
                 <textarea
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
+                  value={form.description}
+                  onChange={(e) => setField("description", e.target.value)}
                   rows={8}
                   placeholder="Describe your hotel, its unique features, surroundings, and what makes it special..."
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-y"
                 />
-                <p className="text-xs text-slate-400 mt-1">
-                  Write a compelling description that highlights your hotel's unique selling points.
-                </p>
               </div>
-              <div className="flex justify-end pt-2">
-                <SaveButton onClick={handleSaveOverview} />
-              </div>
+              <div className="flex justify-end pt-2"><SaveButton onClick={handleSaveOverview} /></div>
             </div>
           )}
 
-          {/* Gallery Tab */}
-          {activeTab === "gallery" && (
+          {activeTab === "location" && (
             <div className="space-y-5">
-              {existingImages.length > 0 && (
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-3">
-                    Current Images ({existingImages.length})
-                  </label>
+              <FormInput label="Apartment / unit (optional)" value={form.apartmentNumber} onChange={(e) => setField("apartmentNumber", e.target.value)} />
+              <FormInput label="Street address" value={form.streetAddress} onChange={(e) => setField("streetAddress", e.target.value)} />
+              <div className="grid grid-cols-2 gap-4">
+                <FormInput label="City" value={form.city} onChange={(e) => setField("city", e.target.value)} />
+                <FormInput label="Postal code (optional)" value={form.postalCode} onChange={(e) => setField("postalCode", e.target.value)} />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <FormInput label="Province (optional)" value={form.province} onChange={(e) => setField("province", e.target.value)} />
+                <FormSelect label="Country" value={form.country} onChange={(e) => setField("country", e.target.value)}>
+                  {COUNTRIES.map((c) => <option key={c.iso} value={c.iso}>{c.name}</option>)}
+                </FormSelect>
+              </div>
+              <FormInput label="Contact number (optional)" value={form.contactNumber} onChange={(e) => setField("contactNumber", e.target.value)} />
+              <div className="flex justify-end pt-2"><SaveButton onClick={handleSaveLocation} /></div>
+            </div>
+          )}
+
+          {activeTab === "guests" && (
+            <div className="space-y-5">
+              <FormSelect label="Bathroom" value={form.bathroomType} onChange={(e) => setField("bathroomType", e.target.value)}>
+                {BATHROOM_TYPES.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </FormSelect>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Who else might be there</label>
+                <div className="flex flex-wrap gap-2">
+                  {WHO_ELSE_OPTIONS.map((o) => (
+                    <ToggleChip key={o.value} label={o.label} selected={form.whoElseIsThere.includes(o.value)} onToggle={() => toggleWhoElse(o.value)} />
+                  ))}
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <FormInput label="Check-in time" type="time" value={form.checkInTime} onChange={(e) => setField("checkInTime", e.target.value)} />
+                <FormInput label="Check-out time" type="time" value={form.checkOutTime} onChange={(e) => setField("checkOutTime", e.target.value)} />
+              </div>
+              <div className="flex justify-end pt-2"><SaveButton onClick={handleSaveGuests} /></div>
+            </div>
+          )}
+
+          {activeTab === "pricing" && (
+            <div className="space-y-5">
+              <div className="grid grid-cols-2 gap-4">
+                <FormInput label="Price per night (LKR)" type="number" min="0" value={form.basePrice} onChange={(e) => setField("basePrice", e.target.value)} />
+                <FormSelect label="Booking method" value={form.bookingMethod} onChange={(e) => setField("bookingMethod", e.target.value)}>
+                  {BOOKING_METHODS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </FormSelect>
+              </div>
+              <div className="flex justify-end pt-2"><SaveButton onClick={handleSavePricing} /></div>
+            </div>
+          )}
+
+          {activeTab === "amenities" && (
+            <div className="space-y-5">
+              <div className="flex flex-wrap gap-2 mb-3">
+                {PREDEFINED_AMENITIES.map((amenity) => (
+                  <ToggleChip key={amenity} label={amenity} selected={form.amenities.includes(amenity)} onToggle={() => toggleAmenity(amenity)} />
+                ))}
+              </div>
+              {form.amenities.filter((a) => !PREDEFINED_AMENITIES.includes(a)).map((amenity) => (
+                <ToggleChip key={amenity} label={amenity} removable onToggle={() => toggleAmenity(amenity)} className="mr-2 mb-2" />
+              ))}
+              <div className="flex gap-2">
+                <input
+                  type="text" value={customAmenity} onChange={(e) => setCustomAmenity(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCustomAmenity(); } }}
+                  placeholder="Add custom amenity..."
+                  className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+                <Button variant="secondary" size="sm" onClick={addCustomAmenity}>Add</Button>
+              </div>
+              <div className="flex justify-end pt-2"><SaveButton onClick={handleSaveAmenities} /></div>
+            </div>
+          )}
+
+          {activeTab === "gallery" && (
+            <div className="space-y-6">
+              <div>
+                <h3 className="text-sm font-semibold text-slate-700 mb-2">Current profile photo</h3>
+                {existingProfileImage ? (
+                  <img src={existingProfileImage} alt="Profile" className="w-32 h-32 object-cover rounded-xl border border-slate-200" />
+                ) : (
+                  <p className="text-sm text-slate-400 italic">No profile photo set yet.</p>
+                )}
+              </div>
+
+              <div>
+                <h3 className="text-sm font-semibold text-slate-700 mb-2">Current gallery ({existingGalleryImages.length})</h3>
+                {existingGalleryImages.length > 0 ? (
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                    {existingImages.map((url, idx) => (
-                      <div key={idx} className="relative group aspect-square">
-                        <img
-                          src={url}
-                          alt={`Hotel ${idx + 1}`}
-                          className="w-full h-full object-cover rounded-lg border border-slate-200"
-                        />
-                        {idx === 0 && (
-                          <span className="absolute top-1 left-1 text-[10px] bg-blue-600 text-white px-1.5 py-0.5 rounded">
-                            Profile
-                          </span>
-                        )}
-                      </div>
+                    {existingGalleryImages.map((url, idx) => (
+                      <img key={idx} src={url} alt={`Gallery ${idx + 1}`} className="aspect-square w-full object-cover rounded-lg border border-slate-200" />
                     ))}
                   </div>
-                </div>
-              )}
+                ) : (
+                  <p className="text-sm text-slate-400 italic">No gallery photos yet.</p>
+                )}
+              </div>
 
               {imageError && <Alert variant="error">{imageError}</Alert>}
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-3">
-                  Upload New Images (replaces current gallery)
+                <h3 className="text-sm font-semibold text-slate-700 mb-2">New profile photo (optional)</h3>
+                <label className="relative flex h-24 w-24 items-center justify-center rounded-xl border-2 border-dashed border-slate-300 cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition-colors overflow-hidden">
+                  {newProfilePreview ? (
+                    <img src={newProfilePreview} alt="New profile" className="h-full w-full object-cover" />
+                  ) : (
+                    <span className="flex flex-col items-center text-slate-400">
+                      <Camera className="h-5 w-5" />
+                      <span className="text-[10px] mt-1">Add photo</span>
+                    </span>
+                  )}
+                  <input type="file" accept="image/*" onChange={handleProfileFileChange} className="hidden" />
                 </label>
+              </div>
+
+              <div>
+                <h3 className="text-sm font-semibold text-slate-700 mb-2">
+                  Upload new gallery — replaces the whole gallery ({newGalleryFiles.length}/{MIN_GALLERY_IMAGES} minimum)
+                </h3>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                  {newPreviews.map((src, idx) => (
+                  {newGalleryPreviews.map((src, idx) => (
                     <div key={idx} className="relative group aspect-square">
-                      <img
-                        src={src}
-                        alt={`New ${idx + 1}`}
-                        className="w-full h-full object-cover rounded-lg border border-slate-200"
-                      />
+                      <img src={src} alt={`New ${idx + 1}`} className="w-full h-full object-cover rounded-lg border border-slate-200" />
                       <button
-                        type="button"
-                        onClick={() => removeNewImage(idx)}
+                        type="button" onClick={() => removeGalleryFile(idx)}
                         className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
                       >
                         <X className="h-3 w-3" />
                       </button>
                     </div>
                   ))}
-                  {existingImages.length + newImages.length < 10 && (
-                    <label className="aspect-square flex flex-col items-center justify-center border-2 border-dashed border-slate-300 rounded-lg cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition-colors">
-                      <Upload className="h-6 w-6 text-slate-400 mb-1" />
-                      <span className="text-xs text-slate-500">Upload</span>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        multiple
-                        onChange={handleNewImages}
-                        className="hidden"
-                      />
-                    </label>
-                  )}
-                </div>
-                <p className="text-xs text-slate-400 mt-2">
-                  Upload up to 10 images. The first image will be used as the hotel profile picture.
-                </p>
-              </div>
-              <div className="flex justify-end pt-2">
-                <SaveButton onClick={handleSaveGallery} />
-              </div>
-            </div>
-          )}
-
-          {/* Location Tab */}
-          {activeTab === "location" && (
-            <div className="space-y-5">
-              <FormInput
-                label="Location Name"
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                placeholder="e.g. Sigiriya, Sri Lanka"
-              />
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-3">
-                  Pick Location on Map
-                </label>
-                <LocationPicker
-                  onSelect={handleLocationSelect}
-                  initialPosition={
-                    coordinates ? [coordinates.lat, coordinates.lng] : null
-                  }
-                />
-              </div>
-              <FormInput
-                label="Full Address"
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
-                placeholder="Auto-filled from map or enter manually"
-              />
-              {coordinates && (
-                <p className="text-xs text-slate-400">
-                  Coordinates: {coordinates.lat.toFixed(6)}, {coordinates.lng.toFixed(6)}
-                </p>
-              )}
-              <div className="flex justify-end pt-2">
-                <SaveButton onClick={handleSaveLocation} />
-              </div>
-            </div>
-          )}
-
-          {/* Contact Tab */}
-          {activeTab === "contact" && (
-            <div className="space-y-5">
-              <FormInput
-                label="Phone Number"
-                type="tel"
-                value={mobile}
-                onChange={(e) => setMobile(e.target.value)}
-                placeholder="+94 XX XXX XXXX"
-              />
-              <FormInput
-                label="Email Address"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="hotel@example.com"
-              />
-              <div className="flex justify-end pt-2">
-                <SaveButton onClick={handleSaveContact} />
-              </div>
-            </div>
-          )}
-
-          {/* Facilities Tab */}
-          {activeTab === "facilities" && (
-            <div className="space-y-6">
-              {/* Amenities */}
-              <div>
-                <h3 className="text-lg font-semibold text-slate-800 mb-3">Hotel Amenities</h3>
-                <div className="flex flex-wrap gap-2 mb-3">
-                  {PREDEFINED_AMENITIES.map((amenity) => (
-                    <ToggleChip
-                      key={amenity}
-                      label={amenity}
-                      selected={amenities.includes(amenity)}
-                      onToggle={() => toggleAmenity(amenity)}
-                    />
-                  ))}
-                </div>
-                {amenities
-                  .filter((a) => !PREDEFINED_AMENITIES.includes(a))
-                  .map((amenity) => (
-                    <ToggleChip
-                      key={amenity}
-                      label={amenity}
-                      removable
-                      onToggle={() => toggleAmenity(amenity)}
-                      className="mr-2 mb-2"
-                    />
-                  ))}
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={customAmenity}
-                    onChange={(e) => setCustomAmenity(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") { e.preventDefault(); addCustomAmenity(); }
-                    }}
-                    placeholder="Add custom amenity..."
-                    className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                  <Button variant="secondary" size="sm" onClick={addCustomAmenity}>Add</Button>
+                  <label className="aspect-square flex flex-col items-center justify-center border-2 border-dashed border-slate-300 rounded-lg cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition-colors">
+                    <Upload className="h-6 w-6 text-slate-400 mb-1" />
+                    <span className="text-xs text-slate-500">Upload</span>
+                    <input type="file" accept="image/*" multiple onChange={handleGalleryFilesChange} className="hidden" />
+                  </label>
                 </div>
               </div>
-
-              {/* Activities */}
-              <div>
-                <h3 className="text-lg font-semibold text-slate-800 mb-3">Activities</h3>
-                <div className="flex flex-wrap gap-2 mb-3">
-                  {PREDEFINED_ACTIVITIES.map((activity) => (
-                    <ToggleChip
-                      key={activity}
-                      label={activity}
-                      selected={activities.includes(activity)}
-                      onToggle={() => toggleActivity(activity)}
-                      selectedColor="bg-emerald-100 text-emerald-800 border-emerald-300"
-                    />
-                  ))}
-                </div>
-                {activities
-                  .filter((a) => !PREDEFINED_ACTIVITIES.includes(a))
-                  .map((activity) => (
-                    <span
-                      key={activity}
-                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800 border border-emerald-300 mr-2 mb-2"
-                    >
-                      {activity}
-                      <button type="button" onClick={() => toggleActivity(activity)} className="hover:text-red-600">
-                        <X className="h-3 w-3" />
-                      </button>
-                    </span>
-                  ))}
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={customActivity}
-                    onChange={(e) => setCustomActivity(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") { e.preventDefault(); addCustomActivity(); }
-                    }}
-                    placeholder="Add custom activity..."
-                    className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                  <Button variant="secondary" size="sm" onClick={addCustomActivity}>Add</Button>
-                </div>
-              </div>
-
-              <div className="flex justify-end pt-2">
-                <SaveButton onClick={handleSaveFacilities} />
-              </div>
-            </div>
-          )}
-
-          {/* FAQs Tab */}
-          {activeTab === "faqs" && (
-            <div className="space-y-5">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-slate-800">
-                  Frequently Asked Questions
-                </h3>
-                <button
-                  type="button"
-                  onClick={addFaq}
-                  className="inline-flex items-center text-sm text-blue-600 hover:text-blue-700 font-medium"
-                >
-                  <Plus className="h-4 w-4 mr-1" />
-                  Add FAQ
-                </button>
-              </div>
-              {faqs.length === 0 && (
-                <p className="text-sm text-slate-400 italic">
-                  No FAQs added yet. Click "Add FAQ" to create one.
-                </p>
-              )}
-              <div className="space-y-4">
-                {faqs.map((faq, idx) => (
-                  <div
-                    key={idx}
-                    className="p-4 bg-slate-50 rounded-lg border border-slate-200"
-                  >
-                    <div className="flex items-start justify-between gap-2 mb-3">
-                      <span className="text-sm font-medium text-slate-600">
-                        FAQ {idx + 1}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => removeFaq(idx)}
-                        className="p-1 text-red-500 hover:bg-red-50 rounded"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                    <div className="space-y-3">
-                      <FormInput
-                        value={faq.question}
-                        onChange={(e) => updateFaq(idx, "question", e.target.value)}
-                        placeholder="Question"
-                      />
-                      <textarea
-                        value={faq.answer}
-                        onChange={(e) => updateFaq(idx, "answer", e.target.value)}
-                        placeholder="Answer"
-                        rows={2}
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-y"
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <div className="flex justify-end pt-2">
-                <SaveButton onClick={handleSaveFaqs} />
-              </div>
-            </div>
-          )}
-
-          {/* Policies Tab */}
-          {activeTab === "policies" && (
-            <div className="space-y-5">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-slate-800">
-                  Hotel Policies
-                </h3>
-                <button
-                  type="button"
-                  onClick={() => addPolicy()}
-                  className="inline-flex items-center text-sm text-blue-600 hover:text-blue-700 font-medium"
-                >
-                  <Plus className="h-4 w-4 mr-1" />
-                  Add Policy
-                </button>
-              </div>
-
-              {POLICY_SUGGESTIONS.filter(
-                (s) => !policies.some((p) => p.title === s)
-              ).length > 0 && (
-                <div>
-                  <p className="text-xs text-slate-500 mb-2">Quick add:</p>
-                  <div className="flex flex-wrap gap-2">
-                    {POLICY_SUGGESTIONS.filter(
-                      (s) => !policies.some((p) => p.title === s)
-                    ).map((suggestion) => (
-                      <button
-                        key={suggestion}
-                        type="button"
-                        onClick={() => addPolicy(suggestion)}
-                        className="px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-full text-xs transition-colors"
-                      >
-                        + {suggestion}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {policies.length === 0 && (
-                <p className="text-sm text-slate-400 italic">
-                  No policies added yet. Use the quick add buttons above or click "Add Policy".
-                </p>
-              )}
-
-              <div className="space-y-4">
-                {policies.map((policy, idx) => (
-                  <div
-                    key={idx}
-                    className="p-4 bg-slate-50 rounded-lg border border-slate-200"
-                  >
-                    <div className="flex items-start justify-between gap-2 mb-3">
-                      <span className="text-sm font-medium text-slate-600">
-                        Policy {idx + 1}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => removePolicy(idx)}
-                        className="p-1 text-red-500 hover:bg-red-50 rounded"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                    <div className="space-y-3">
-                      <FormInput
-                        value={policy.title}
-                        onChange={(e) => updatePolicy(idx, "title", e.target.value)}
-                        placeholder="Policy title (e.g. Pet Policy)"
-                      />
-                      <textarea
-                        value={policy.description}
-                        onChange={(e) => updatePolicy(idx, "description", e.target.value)}
-                        placeholder="Describe the policy details..."
-                        rows={2}
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-y"
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <div className="flex justify-end pt-2">
-                <SaveButton onClick={handleSavePolicies} />
-              </div>
+              <div className="flex justify-end pt-2"><SaveButton onClick={handleSaveGallery} /></div>
             </div>
           )}
         </div>

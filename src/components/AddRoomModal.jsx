@@ -1,35 +1,38 @@
 import { useState } from "react";
-import { Plus, Trash2, Upload, Image, Clock, Coffee, Check, AlertCircle } from "lucide-react";
+import { Upload, Image, Clock, Coffee, Check, AlertCircle, X } from "lucide-react";
 import axiosInstance from "../api/axiosInstance";
 import { useNotifications } from "../context/NotificationContext";
 import { Modal, FormInput, FormSelect, Button, Alert, ToggleChip } from "./ui";
+import {
+  ROOM_TYPES, AC_TYPES, FLOOR_TYPES, BED_TYPES, PREDEFINED_ROOM_AMENITIES,
+} from "../constants/hotel";
 
-const PREDEFINED_AMENITIES = [
-  "TV", "Smart TV", "Smart TV with Netflix", "Smoking Allowed", "No Smoking",
-  "Tea/Coffee Maker", "WiFi", "Breakfast Included", "Attached Bathroom",
-  "Upper Floor", "Ground Floor", "Clothes Rack", "Electric Kettle", "Telephone",
-  "Iron", "Hairdryer", "Desk", "Sitting Area", "Towels", "Bathtub", "Refrigerator",
-];
+const MIN_ROOM_IMAGES = 5;
 
+const emptyBedCounts = { SINGLE_BED: 0, DOUBLE_BED: 0, QUEEN: 0, KING_SIZE: 0 };
+
+// Room creation and room images are two separate backend calls (POST /rooms/add
+// takes no images at all — PUT /rooms/:room_id/images is a dedicated follow-up),
+// same two-step pattern as hotel registration/photos.
 const AddRoomModal = ({ isOpen, onClose, hotelId, onRoomAdded }) => {
   const { addNotification } = useNotifications();
   const [roomName, setRoomName] = useState("");
-  const [roomLabel, setRoomLabel] = useState("");
-  const [roomCount, setRoomCount] = useState(1);
-  const [roomType, setRoomType] = useState("family");
-  const [bedTypes, setBedTypes] = useState({
-    single: 0, double: 0, queen: 0, king: 0,
-  });
+  const [roomType, setRoomType] = useState("FAMILY");
+  const [bedCounts, setBedCounts] = useState(emptyBedCounts);
 
-  const [nightStayPrice, setNightStayPrice] = useState("");
-  const [nightStayAcType, setNightStayAcType] = useState("AC");
+  const [price, setPrice] = useState("");
+  const [acType, setAcType] = useState("AC");
+  const [floor, setFloor] = useState("UPPER_FLOOR");
   const [defaultCheckInTime, setDefaultCheckInTime] = useState("14:00");
   const [defaultCheckOutTime, setDefaultCheckOutTime] = useState("12:00");
 
+  const [airMattress, setAirMattress] = useState(false);
+  const [clothingStorage, setClothingStorage] = useState(false);
+  const [bedLinens, setBedLinens] = useState(false);
+  const [attachedBathroom, setAttachedBathroom] = useState(false);
+
   const [selectedAmenities, setSelectedAmenities] = useState([]);
   const [customAmenity, setCustomAmenity] = useState("");
-
-  const [packages, setPackages] = useState([]);
 
   const [images, setImages] = useState([]);
   const [previews, setPreviews] = useState([]);
@@ -39,18 +42,13 @@ const AddRoomModal = ({ isOpen, onClose, hotelId, onRoomAdded }) => {
   const [submitMessage, setSubmitMessage] = useState("");
   const [validationError, setValidationError] = useState("");
 
-  const handleBedTypeChange = (type, value) => {
-    setBedTypes((prev) => ({
-      ...prev,
-      [type]: Math.max(0, parseInt(value) || 0),
-    }));
+  const handleBedCountChange = (type, value) => {
+    setBedCounts((prev) => ({ ...prev, [type]: Math.max(0, parseInt(value) || 0) }));
   };
 
   const toggleAmenity = (amenity) => {
     setSelectedAmenities((prev) =>
-      prev.includes(amenity)
-        ? prev.filter((a) => a !== amenity)
-        : [...prev, amenity]
+      prev.includes(amenity) ? prev.filter((a) => a !== amenity) : [...prev, amenity]
     );
   };
 
@@ -62,36 +60,13 @@ const AddRoomModal = ({ isOpen, onClose, hotelId, onRoomAdded }) => {
     }
   };
 
-  const handlePackageChange = (index, field, value) => {
-    setPackages((prev) =>
-      prev.map((pkg, i) => (i === index ? { ...pkg, [field]: value } : pkg))
-    );
-  };
-
-  const addPackage = () => {
-    setPackages((prev) => [
-      ...prev,
-      { packageName: "", checkInTime: "08:00", checkOutTime: "17:00", acType: "AC", price: "" },
-    ]);
-  };
-
-  const removePackage = (index) => {
-    setPackages((prev) => prev.filter((_, i) => i !== index));
-  };
-
   const handleImageChange = (e) => {
-    const files = Array.from(e.target.files);
-    const totalImages = images.length + files.length;
-
-    if (totalImages > 7) {
-      setValidationError("Maximum 7 images allowed");
-      setTimeout(() => setValidationError(""), 3000);
-      return;
-    }
-
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
     const newPreviews = files.map((file) => URL.createObjectURL(file));
     setImages((prev) => [...prev, ...files]);
     setPreviews((prev) => [...prev, ...newPreviews]);
+    e.target.value = "";
   };
 
   const removeImage = (index) => {
@@ -101,69 +76,65 @@ const AddRoomModal = ({ isOpen, onClose, hotelId, onRoomAdded }) => {
   };
 
   const resetForm = () => {
-    setRoomName(""); setRoomLabel(""); setRoomCount(1); setRoomType("family");
-    setBedTypes({ single: 0, double: 0, queen: 0, king: 0 });
-    setNightStayPrice(""); setNightStayAcType("AC");
+    setRoomName(""); setRoomType("FAMILY"); setBedCounts(emptyBedCounts);
+    setPrice(""); setAcType("AC"); setFloor("UPPER_FLOOR");
     setDefaultCheckInTime("14:00"); setDefaultCheckOutTime("12:00");
-    setSelectedAmenities([]); setCustomAmenity(""); setPackages([]);
+    setAirMattress(false); setClothingStorage(false); setBedLinens(false); setAttachedBathroom(false);
+    setSelectedAmenities([]); setCustomAmenity("");
     previews.forEach((p) => URL.revokeObjectURL(p));
     setImages([]); setPreviews([]); setValidationError("");
     setSubmitStatus(null); setSubmitMessage("");
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e, skipImages = false) => {
     e.preventDefault();
     setValidationError(""); setSubmitStatus(null);
 
     if (!hotelId) { setValidationError("Hotel not found. Please try again."); return; }
-    if (images.length < 3) { setValidationError("Please upload at least 3 images"); return; }
-    if (!nightStayPrice) { setValidationError("Please enter the night stay price"); return; }
-
-    const invalidPackages = packages.some(
-      (pkg) => !pkg.packageName || !pkg.checkInTime || !pkg.checkOutTime || !pkg.price
-    );
-    if (invalidPackages) { setValidationError("Please fill in all day-out package fields"); return; }
+    if (!roomName.trim()) { setValidationError("Please enter a room name"); return; }
+    if (!price) { setValidationError("Please enter the price per night"); return; }
+    if (!skipImages && images.length > 0 && images.length < MIN_ROOM_IMAGES) {
+      setValidationError(`Add at least ${MIN_ROOM_IMAGES} images, or use "Skip photos" to add them later.`);
+      return;
+    }
 
     setLoading(true);
     try {
-      const formData = new FormData();
-      formData.append("hotelId", hotelId);
-      formData.append("roomType", roomType);
-      formData.append("roomName", roomName);
-      if (roomCount > 1) {
-        formData.append("roomCount", roomCount);
-      } else {
-        formData.append("roomLabel", roomLabel);
-      }
-      formData.append("bedTypes", JSON.stringify(bedTypes));
-      formData.append("nightStayPrice", nightStayPrice);
-      formData.append("nightStayAcType", nightStayAcType);
-      formData.append("defaultCheckInTime", defaultCheckInTime);
-      formData.append("defaultCheckOutTime", defaultCheckOutTime);
-      formData.append("amenities", JSON.stringify(selectedAmenities));
-      formData.append(
-        "packages",
-        JSON.stringify(packages.map((pkg) => ({ ...pkg, price: Number(pkg.price) })))
-      );
-      images.forEach((file) => formData.append("images", file));
+      const bedTypes = Object.entries(bedCounts)
+        .filter(([, count]) => count > 0)
+        .map(([type, count]) => ({ type, count }));
 
-      const res = await axiosInstance.post("/rooms/add-room", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
+      const res = await axiosInstance.post("/rooms/add", {
+        hotel_id: hotelId,
+        roomName,
+        roomType,
+        bedTypes,
+        defaultCheckInTime,
+        defaultCheckOutTime,
+        acType,
+        price: Number(price),
+        airMattress,
+        clothingStorage,
+        bedLinens,
+        attachedBathroom,
+        floor,
+        amenities: selectedAmenities,
       });
 
-      const count = res.data.count || 1;
-      const createdRoom = res.data.room || (res.data.rooms && res.data.rooms[0]);
+      const createdRoom = res.data.room;
+
+      if (!skipImages && images.length >= MIN_ROOM_IMAGES) {
+        const formData = new FormData();
+        images.forEach((file) => formData.append("images", file));
+        await axiosInstance.put(`/rooms/${createdRoom.room_id}/images`, formData, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+      }
 
       setSubmitStatus("success");
-      setSubmitMessage(count > 1 ? `${count} rooms added!` : "Room added!");
+      setSubmitMessage("Room added!");
 
-      addNotification(
-        "room_added",
-        count > 1
-          ? `${count} "${roomName}" rooms added successfully`
-          : `Room "${createdRoom?.roomLabel}" added successfully`,
-        createdRoom
-      );
+      addNotification("room_added", `Room "${createdRoom.roomName}" added successfully`, createdRoom);
 
       setTimeout(() => { resetForm(); onRoomAdded(); onClose(); }, 1200);
     } catch (err) {
@@ -176,10 +147,10 @@ const AddRoomModal = ({ isOpen, onClose, hotelId, onRoomAdded }) => {
   };
 
   const getSubmitButtonContent = () => {
-    if (loading) return <>{<div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />}{roomCount > 1 ? `Adding ${roomCount} Rooms...` : "Adding Room..."}</>;
+    if (loading) return <>{<div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />}Adding Room...</>;
     if (submitStatus === "success") return <><Check className="h-4 w-4" />{submitMessage}</>;
     if (submitStatus === "error") return <><AlertCircle className="h-4 w-4" />{submitMessage}</>;
-    return roomCount > 1 ? `Add ${roomCount} Rooms` : "Add Room";
+    return "Add Room";
   };
 
   const getSubmitButtonStyle = () => {
@@ -190,10 +161,9 @@ const AddRoomModal = ({ isOpen, onClose, hotelId, onRoomAdded }) => {
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Add New Room">
-      <form onSubmit={handleSubmit} className="p-6 space-y-6">
+      <form onSubmit={(e) => handleSubmit(e, false)} className="p-6 space-y-6">
         {validationError && <Alert variant="error">{validationError}</Alert>}
 
-        {/* Room Name */}
         <FormInput
           label="Room Name"
           value={roomName}
@@ -202,52 +172,23 @@ const AddRoomModal = ({ isOpen, onClose, hotelId, onRoomAdded }) => {
           required
         />
 
-        {/* Room Count, Label & Type */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <FormSelect label="Number of Rooms" value={roomCount} onChange={(e) => setRoomCount(parseInt(e.target.value))}>
-            {[1, 2, 3, 5, 10, 15, 20, 25, 50, 100, 200, 500].map((n) => (
-              <option key={n} value={n}>{n} {n === 1 ? "room" : "rooms"}</option>
-            ))}
-          </FormSelect>
-          {roomCount > 1 && (
-            <p className="text-xs text-slate-500 mt-1 sm:col-span-2 self-end">
-              Labels will be auto-generated
-            </p>
-          )}
-          {roomCount === 1 && (
-            <FormInput
-              label="Room Label"
-              value={roomLabel}
-              onChange={(e) => setRoomLabel(e.target.value)}
-              placeholder="e.g. R-101"
-              required
-            />
-          )}
-          <FormSelect
-            label="Room Type"
-            value={roomType}
-            onChange={(e) => setRoomType(e.target.value)}
-            options={[
-              { value: "family", label: "Family" },
-              { value: "couple", label: "Couple" },
-            ]}
-          />
+          <FormSelect label="Room Type" value={roomType} onChange={(e) => setRoomType(e.target.value)} options={ROOM_TYPES} />
+          <FormSelect label="AC Type" value={acType} onChange={(e) => setAcType(e.target.value)} options={AC_TYPES} />
+          <FormSelect label="Floor" value={floor} onChange={(e) => setFloor(e.target.value)} options={FLOOR_TYPES} />
         </div>
 
-        {/* Bed Types */}
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-2">
-            Bed Types
-          </label>
+          <label className="block text-sm font-medium text-slate-700 mb-2">Bed Types</label>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {Object.entries(bedTypes).map(([type, count]) => (
-              <div key={type}>
-                <label className="block text-xs text-slate-500 mb-1 capitalize">{type}</label>
+            {BED_TYPES.map(({ value, label }) => (
+              <div key={value}>
+                <label className="block text-xs text-slate-500 mb-1">{label}</label>
                 <input
                   type="number"
                   min="0"
-                  value={count}
-                  onChange={(e) => handleBedTypeChange(type, e.target.value)}
+                  value={bedCounts[value]}
+                  onChange={(e) => handleBedCountChange(value, e.target.value)}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-center"
                 />
               </div>
@@ -255,143 +196,60 @@ const AddRoomModal = ({ isOpen, onClose, hotelId, onRoomAdded }) => {
           </div>
         </div>
 
-        {/* Night Stay Section */}
         <div className="p-4 bg-tint rounded-lg border border-brand-border">
           <div className="flex items-center gap-2 mb-3">
             <Clock className="h-4 w-4 text-primary" />
-            <h3 className="text-sm font-semibold text-primary-dark">Night Stay (Per Night)</h3>
+            <h3 className="text-sm font-semibold text-primary-dark">Pricing & Check-in / Check-out</h3>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             <FormInput
-              label="Price (LKR)"
+              label="Price per night (LKR)"
               labelClassName="block text-xs text-slate-500 mb-1"
-              type="number"
-              min="0"
-              value={nightStayPrice}
-              onChange={(e) => setNightStayPrice(e.target.value)}
-              placeholder="0"
-              required
+              type="number" min="0" value={price} onChange={(e) => setPrice(e.target.value)}
+              placeholder="0" required
             />
-            <FormSelect
-              label="AC Type"
-              labelClassName="block text-xs text-slate-500 mb-1"
-              value={nightStayAcType}
-              onChange={(e) => setNightStayAcType(e.target.value)}
-              options={[{ value: "AC", label: "AC" }, { value: "Non-AC", label: "Non-AC" }]}
-            />
-            <FormInput
-              label="Check-in Time"
-              labelClassName="block text-xs text-slate-500 mb-1"
-              type="time"
-              value={defaultCheckInTime}
-              onChange={(e) => setDefaultCheckInTime(e.target.value)}
-              required
-            />
-            <FormInput
-              label="Check-out Time"
-              labelClassName="block text-xs text-slate-500 mb-1"
-              type="time"
-              value={defaultCheckOutTime}
-              onChange={(e) => setDefaultCheckOutTime(e.target.value)}
-              required
-            />
+            <FormInput label="Check-in Time" labelClassName="block text-xs text-slate-500 mb-1" type="time" value={defaultCheckInTime} onChange={(e) => setDefaultCheckInTime(e.target.value)} required />
+            <FormInput label="Check-out Time" labelClassName="block text-xs text-slate-500 mb-1" type="time" value={defaultCheckOutTime} onChange={(e) => setDefaultCheckOutTime(e.target.value)} required />
           </div>
         </div>
 
-        {/* Amenities */}
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-2">Room Features</label>
+          <div className="flex flex-wrap gap-2">
+            <ToggleChip label="Air mattress available" selected={airMattress} onToggle={() => setAirMattress((v) => !v)} />
+            <ToggleChip label="Clothing storage" selected={clothingStorage} onToggle={() => setClothingStorage((v) => !v)} />
+            <ToggleChip label="Bed linens provided" selected={bedLinens} onToggle={() => setBedLinens((v) => !v)} />
+            <ToggleChip label="Attached bathroom" selected={attachedBathroom} onToggle={() => setAttachedBathroom((v) => !v)} />
+          </div>
+        </div>
+
         <div>
           <div className="flex items-center gap-2 mb-2">
             <Coffee className="h-4 w-4 text-slate-600" />
             <label className="block text-sm font-medium text-slate-700">Room Amenities</label>
           </div>
           <div className="flex flex-wrap gap-2 mb-3">
-            {PREDEFINED_AMENITIES.map((amenity) => (
-              <ToggleChip
-                key={amenity}
-                label={amenity}
-                selected={selectedAmenities.includes(amenity)}
-                onToggle={() => toggleAmenity(amenity)}
-              />
+            {PREDEFINED_ROOM_AMENITIES.map((amenity) => (
+              <ToggleChip key={amenity} label={amenity} selected={selectedAmenities.includes(amenity)} onToggle={() => toggleAmenity(amenity)} />
             ))}
           </div>
-          {selectedAmenities
-            .filter((a) => !PREDEFINED_AMENITIES.includes(a))
-            .map((amenity) => (
-              <ToggleChip
-                key={amenity}
-                label={amenity}
-                removable
-                onToggle={() => toggleAmenity(amenity)}
-                className="mr-2 mb-2"
-              />
-            ))}
+          {selectedAmenities.filter((a) => !PREDEFINED_ROOM_AMENITIES.includes(a)).map((amenity) => (
+            <ToggleChip key={amenity} label={amenity} removable onToggle={() => toggleAmenity(amenity)} className="mr-2 mb-2" />
+          ))}
           <div className="flex gap-2">
             <input
-              type="text"
-              value={customAmenity}
-              onChange={(e) => setCustomAmenity(e.target.value)}
+              type="text" value={customAmenity} onChange={(e) => setCustomAmenity(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCustomAmenity(); } }}
               placeholder="Add custom amenity..."
               className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
             />
-            <Button variant="secondary" size="sm" onClick={addCustomAmenity}>Add</Button>
+            <Button variant="secondary" size="sm" type="button" onClick={addCustomAmenity}>Add</Button>
           </div>
         </div>
 
-        {/* Day-Out Packages */}
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <label className="block text-sm font-medium text-slate-700">Day-Out Packages (Optional)</label>
-            <button
-              type="button"
-              onClick={addPackage}
-              className="inline-flex items-center text-sm text-primary hover:text-primary-dark font-medium"
-            >
-              <Plus className="h-4 w-4 mr-1" />
-              Add Package
-            </button>
-          </div>
-          {packages.length === 0 && (
-            <p className="text-xs text-slate-400 italic">
-              No day-out packages added. Click "Add Package" to create one.
-            </p>
-          )}
-          <div className="space-y-3">
-            {packages.map((pkg, index) => (
-              <div key={index} className="p-4 bg-amber-50 rounded-lg border border-amber-200">
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-sm font-medium text-amber-800">Day-Out Package {index + 1}</span>
-                  <button type="button" onClick={() => removePackage(index)} className="p-1 text-red-500 hover:bg-red-50 rounded">
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
-                  <div className="sm:col-span-2">
-                    <FormInput
-                      label="Package Name"
-                      labelClassName="block text-xs text-slate-500 mb-1"
-                      value={pkg.packageName}
-                      onChange={(e) => handlePackageChange(index, "packageName", e.target.value)}
-                      placeholder="e.g. Day Out - Morning"
-                      required
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  <FormInput label="Check-in Time" labelClassName="block text-xs text-slate-500 mb-1" type="time" value={pkg.checkInTime} onChange={(e) => handlePackageChange(index, "checkInTime", e.target.value)} required />
-                  <FormInput label="Check-out Time" labelClassName="block text-xs text-slate-500 mb-1" type="time" value={pkg.checkOutTime} onChange={(e) => handlePackageChange(index, "checkOutTime", e.target.value)} required />
-                  <FormSelect label="AC Type" labelClassName="block text-xs text-slate-500 mb-1" value={pkg.acType} onChange={(e) => handlePackageChange(index, "acType", e.target.value)} options={[{ value: "AC", label: "AC" }, { value: "Non-AC", label: "Non-AC" }]} />
-                  <FormInput label="Price (LKR)" labelClassName="block text-xs text-slate-500 mb-1" type="number" min="0" value={pkg.price} onChange={(e) => handlePackageChange(index, "price", e.target.value)} placeholder="0" required />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Image Upload */}
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-2">
-            Room Images ({images.length}/7, minimum 3)
+            Room Images ({images.length}/{MIN_ROOM_IMAGES} minimum, optional)
           </label>
           <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
             {previews.map((src, index) => (
@@ -402,29 +260,31 @@ const AddRoomModal = ({ isOpen, onClose, hotelId, onRoomAdded }) => {
                   onClick={() => removeImage(index)}
                   className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
                 >
-                  <span className="h-3 w-3 block text-xs leading-none">&times;</span>
+                  <X className="h-3 w-3" />
                 </button>
               </div>
             ))}
-            {images.length < 7 && (
-              <label className="aspect-square flex flex-col items-center justify-center border-2 border-dashed border-slate-300 rounded-lg cursor-pointer hover:border-primary hover:bg-tint transition-colors">
-                <Upload className="h-6 w-6 text-slate-400 mb-1" />
-                <span className="text-xs text-slate-500">Upload</span>
-                <input type="file" accept="image/*" multiple onChange={handleImageChange} className="hidden" />
-              </label>
-            )}
+            <label className="aspect-square flex flex-col items-center justify-center border-2 border-dashed border-slate-300 rounded-lg cursor-pointer hover:border-primary hover:bg-tint transition-colors">
+              <Upload className="h-6 w-6 text-slate-400 mb-1" />
+              <span className="text-xs text-slate-500">Upload</span>
+              <input type="file" accept="image/*" multiple onChange={handleImageChange} className="hidden" />
+            </label>
           </div>
           {images.length === 0 && (
             <div className="mt-3 flex items-center gap-2 text-sm text-slate-500">
               <Image className="h-4 w-4" />
-              <span>Upload 3 to 7 images of the room</span>
+              <span>Add at least {MIN_ROOM_IMAGES} photos now, or skip and add them later</span>
             </div>
           )}
         </div>
 
-        {/* Submit */}
         <div className="flex justify-end gap-3 pt-4 border-t border-brand-border">
-          <Button variant="secondary" onClick={onClose}>Cancel</Button>
+          <Button variant="secondary" type="button" onClick={onClose}>Cancel</Button>
+          {images.length === 0 && (
+            <Button variant="secondary" type="button" onClick={(e) => handleSubmit(e, true)} disabled={loading}>
+              Skip photos
+            </Button>
+          )}
           <button
             type="submit"
             disabled={loading || submitStatus === "success"}

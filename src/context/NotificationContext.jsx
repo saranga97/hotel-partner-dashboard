@@ -46,20 +46,19 @@ export const NotificationProvider = ({ children }) => {
       axiosInstance
         .get("/hotels/my-hotels")
         .then((res) => {
-          res.data.forEach((hotel) => {
-            socket.emit("join_hotel", hotel._id);
+          res.data.hotels.forEach((hotel) => {
+            socket.emit("join_hotel", hotel.hotel_id);
           });
         })
         .catch((err) => console.error("Failed to join hotel rooms:", err));
     });
 
     socket.on("new_booking", (booking) => {
-      const roomName = booking.room?.roomName || booking.room?.roomLabel || "Room";
-      const guestName = booking.user?.fullName || "A guest";
-      const price = booking.selectedPackage?.price?.toLocaleString() || "";
+      const roomName = booking.room?.roomName || "Room";
+      const guestName = booking.user ? `${booking.user.firstName} ${booking.user.lastName}` : "A guest";
       addNotification(
         "new_booking",
-        `New booking request: ${guestName} wants to book ${roomName} for ${booking.date} - LKR ${price}`,
+        `New booking: ${guestName} booked ${roomName} for ${booking.checkInDate} – ${booking.checkOutDate}`,
         booking
       );
     });
