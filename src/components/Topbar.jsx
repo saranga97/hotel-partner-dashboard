@@ -6,7 +6,7 @@ import { EmptyState } from "./ui";
 
 const Topbar = ({ setSidebarOpen }) => {
   const user = JSON.parse(localStorage.getItem("ceylonstay_user"));
-  const hotelName = user?.fullName || "Partner";
+  const hotelName = user ? `${user.firstName || ""} ${user.lastName || ""}`.trim() || "Partner" : "Partner";
   const [showNotifications, setShowNotifications] = useState(false);
   const dropdownRef = useRef(null);
   const navigate = useNavigate();

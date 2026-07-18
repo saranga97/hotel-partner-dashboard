@@ -4,7 +4,7 @@ const PrivateRoute = ({ children }) => {
   const token = localStorage.getItem("ceylonstay_token");
   const user = JSON.parse(localStorage.getItem("ceylonstay_user"));
 
-  if (!token || !user || user.role !== "partner") {
+  if (!token || !user || user.role?.toUpperCase() !== "HOTEL") {
     return <Navigate to="/login" replace />;
   }
 
