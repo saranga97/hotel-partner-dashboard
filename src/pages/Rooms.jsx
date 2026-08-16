@@ -83,21 +83,25 @@ const Rooms = () => {
     }
   };
 
+  // Backend renamed block/unblock -> hold/release (and the room field
+  // isTemporaryBlocked -> isOnHold) — TRB-020. Keeping the user-facing
+  // "Blocked"/"Unblocked" wording since that's still the clearest label for
+  // this toggle; only the field name and endpoint paths needed to change.
   const handleToggleBlock = async (e, room) => {
     e.stopPropagation();
-    const endpoint = room.isTemporaryBlocked
-      ? `/rooms/${room.room_id}/unblock`
-      : `/rooms/${room.room_id}/block`;
+    const endpoint = room.isOnHold
+      ? `/rooms/${room.room_id}/release`
+      : `/rooms/${room.room_id}/hold`;
     try {
       await axiosInstance.put(endpoint);
       setRooms((prev) =>
         prev.map((r) =>
           r.room_id === room.room_id
-            ? { ...r, isTemporaryBlocked: !r.isTemporaryBlocked }
+            ? { ...r, isOnHold: !r.isOnHold }
             : r
         )
       );
-      showRoomFeedback(room.room_id, "success", room.isTemporaryBlocked ? "Unblocked" : "Blocked");
+      showRoomFeedback(room.room_id, "success", room.isOnHold ? "Unblocked" : "Blocked");
     } catch {
       showRoomFeedback(room.room_id, "error", "Failed");
     }
@@ -112,7 +116,7 @@ const Rooms = () => {
 
   const familyCount = rooms.filter((r) => r.roomType === "FAMILY").length;
   const coupleCount = rooms.filter((r) => r.roomType === "COUPLE").length;
-  const blockedCount = rooms.filter((r) => r.isTemporaryBlocked).length;
+  const blockedCount = rooms.filter((r) => r.isOnHold).length;
 
   // Family/Couple mirror the badge colors used on the room cards below
   // (success green / purple) so the same room type always reads the same
@@ -228,7 +232,7 @@ const Rooms = () => {
                     {room.acType === "AC" ? "AC" : "Non-AC"}
                   </Badge>
                 </div>
-                {room.isTemporaryBlocked && (
+                {room.isOnHold && (
                   <div className="absolute top-3 right-3">
                     <Badge variant="danger" className="px-2 py-1">Blocked</Badge>
                   </div>
@@ -263,13 +267,13 @@ const Rooms = () => {
                     <button
                       onClick={(e) => handleToggleBlock(e, room)}
                       className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                        room.isTemporaryBlocked ? "bg-red-400" : "bg-green-500"
+                        room.isOnHold ? "bg-red-400" : "bg-green-500"
                       }`}
-                      title={room.isTemporaryBlocked ? "Click to unblock" : "Click to block"}
+                      title={room.isOnHold ? "Click to unblock" : "Click to block"}
                     >
                       <span
                         className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                          room.isTemporaryBlocked ? "translate-x-1" : "translate-x-6"
+                          room.isOnHold ? "translate-x-1" : "translate-x-6"
                         }`}
                       />
                     </button>

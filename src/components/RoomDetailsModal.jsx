@@ -35,7 +35,7 @@ const RoomDetailsModal = ({ room, onClose, onRoomUpdated }) => {
     clothingStorage: room?.clothingStorage || false,
     bedLinens: room?.bedLinens || false,
     attachedBathroom: room?.attachedBathroom || false,
-    isTemporaryBlocked: room?.isTemporaryBlocked || false,
+    isOnHold: room?.isOnHold || false,
   });
 
   const [bedCounts, setBedCounts] = useState(bedTypesToCounts(room?.bedTypes));
@@ -68,14 +68,16 @@ const RoomDetailsModal = ({ room, onClose, onRoomUpdated }) => {
     setTimeout(() => { setter(null); msgSetter(""); }, duration);
   };
 
+  // Backend renamed block/unblock -> hold/release (and the room field
+  // isTemporaryBlocked -> isOnHold) — TRB-020.
   const handleToggleBlock = async () => {
-    const endpoint = editData.isTemporaryBlocked
-      ? `/rooms/${room.room_id}/unblock`
-      : `/rooms/${room.room_id}/block`;
+    const endpoint = editData.isOnHold
+      ? `/rooms/${room.room_id}/release`
+      : `/rooms/${room.room_id}/hold`;
     try {
       await axiosInstance.put(endpoint);
-      const wasBlocked = editData.isTemporaryBlocked;
-      setEditData((prev) => ({ ...prev, isTemporaryBlocked: !prev.isTemporaryBlocked }));
+      const wasBlocked = editData.isOnHold;
+      setEditData((prev) => ({ ...prev, isOnHold: !prev.isOnHold }));
       showFeedback(setBlockStatus, setBlockMessage, "success", wasBlocked ? "Room unblocked" : "Room blocked");
       if (onRoomUpdated) onRoomUpdated();
     } catch {
@@ -143,7 +145,7 @@ const RoomDetailsModal = ({ room, onClose, onRoomUpdated }) => {
       defaultCheckOutTime: room?.defaultCheckOutTime || "12:00",
       airMattress: room?.airMattress || false, clothingStorage: room?.clothingStorage || false,
       bedLinens: room?.bedLinens || false, attachedBathroom: room?.attachedBathroom || false,
-      isTemporaryBlocked: room?.isTemporaryBlocked || false,
+      isOnHold: room?.isOnHold || false,
     });
     setBedCounts(bedTypesToCounts(room?.bedTypes));
     setSelectedAmenities(room?.amenities || []);
@@ -267,9 +269,9 @@ const RoomDetailsModal = ({ room, onClose, onRoomUpdated }) => {
 
           <div className="flex items-center justify-between p-3 bg-surface rounded-xl border border-brand-border">
             <div className="flex items-center gap-2">
-              <div className={`w-2.5 h-2.5 rounded-full ${editData.isTemporaryBlocked ? "bg-red-500" : "bg-green-500"}`} />
+              <div className={`w-2.5 h-2.5 rounded-full ${editData.isOnHold ? "bg-red-500" : "bg-green-500"}`} />
               <span className="text-sm text-slate-700">
-                {editData.isTemporaryBlocked ? "Room is blocked" : "Room is available"}
+                {editData.isOnHold ? "Room is blocked" : "Room is available"}
               </span>
               {blockStatus && (
                 <Badge variant={blockStatus === "success" ? "success" : "danger"} className="text-xs px-2 py-0.5">
@@ -280,9 +282,9 @@ const RoomDetailsModal = ({ room, onClose, onRoomUpdated }) => {
             </div>
             <button
               onClick={handleToggleBlock}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${editData.isTemporaryBlocked ? "bg-red-400" : "bg-green-500"}`}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${editData.isOnHold ? "bg-red-400" : "bg-green-500"}`}
             >
-              <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${editData.isTemporaryBlocked ? "translate-x-1" : "translate-x-6"}`} />
+              <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${editData.isOnHold ? "translate-x-1" : "translate-x-6"}`} />
             </button>
           </div>
 

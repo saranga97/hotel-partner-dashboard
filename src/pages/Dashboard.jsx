@@ -57,7 +57,7 @@ const Dashboard = () => {
   // jumps to where it's managed.
   const statCards = [
     { title: "Active Bookings", value: activeBookings, icon: TrendingUp, lightColor: "bg-tint", textColor: "text-primary", onClick: () => navigate("/bookings"), highlight: true },
-    { title: "Available Rooms", value: rooms.filter((r) => !r.isTemporaryBlocked).length, icon: CheckCircle, lightColor: "bg-emerald-50", textColor: "text-emerald-600", onClick: () => navigate("/rooms") },
+    { title: "Available Rooms", value: rooms.filter((r) => !r.isOnHold).length, icon: CheckCircle, lightColor: "bg-emerald-50", textColor: "text-emerald-600", onClick: () => navigate("/rooms") },
     { title: "Total Bookings", value: bookings.length, icon: Calendar, lightColor: "bg-surface", textColor: "text-slate-500", onClick: () => navigate("/bookings") },
     { title: "Total Rooms", value: rooms.length, icon: BedDouble, lightColor: "bg-surface", textColor: "text-slate-500", onClick: () => navigate("/rooms") },
   ];
