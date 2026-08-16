@@ -4,7 +4,7 @@ import {
   Building2, Image, MapPin, Users, DollarSign, Coffee,
   Upload, X, Save, Loader2, Check, AlertCircle, Camera,
 } from "lucide-react";
-import { PageHeader, FormInput, FormSelect, Alert, LoadingSpinner, Button, ToggleChip } from "../components/ui";
+import { PageHeader, FormInput, FormSelect, Alert, LoadingSpinner, Button, ToggleChip, Badge } from "../components/ui";
 import {
   HOTEL_TYPES, PLACE_TYPES, BATHROOM_TYPES, BOOKING_METHODS, WHO_ELSE_OPTIONS,
   COUNTRIES, PREDEFINED_AMENITIES,
@@ -38,6 +38,7 @@ const emptyFormState = {
 };
 
 const HotelProfile = () => {
+  const user = JSON.parse(localStorage.getItem("ceylonstay_user") || "null");
   const [hotel, setHotel] = useState(null);
   const [activeTab, setActiveTab] = useState("overview");
   const [loading, setLoading] = useState(true);
@@ -307,13 +308,13 @@ const HotelProfile = () => {
     const getButtonStyle = () => {
       if (saveStatus === "success") return "bg-green-600 hover:bg-green-700";
       if (saveStatus === "error") return "bg-red-600 hover:bg-red-700";
-      return "bg-blue-600 hover:bg-blue-700";
+      return "bg-primary hover:bg-primary-dark";
     };
     return (
       <button
         onClick={onClick}
         disabled={saving}
-        className={`inline-flex items-center gap-2 px-5 py-2.5 text-white rounded-lg text-sm font-medium transition-all disabled:opacity-50 ${getButtonStyle()}`}
+        className={`inline-flex items-center gap-2 px-5 py-2.5 text-white rounded-xl text-sm font-semibold transition-all disabled:opacity-50 ${getButtonStyle()}`}
       >
         {getButtonContent()}
       </button>
@@ -404,7 +405,7 @@ const HotelProfile = () => {
                 type="text" value={customAmenity} onChange={(e) => setCustomAmenity(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCreateCustomAmenity(); } }}
                 placeholder="Add custom amenity..."
-                className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="flex-1 px-3 py-2 border border-brand-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
               />
               <Button variant="secondary" size="sm" type="button" onClick={addCreateCustomAmenity}>Add</Button>
             </div>
@@ -414,7 +415,7 @@ const HotelProfile = () => {
               <textarea
                 value={createForm.description} onChange={(e) => setCreateField("description", e.target.value)}
                 rows={4} placeholder="Describe your hotel, its unique features, surroundings..."
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-y"
+                className="w-full px-3 py-2 border border-brand-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary resize-y"
               />
             </div>
 
@@ -429,10 +430,12 @@ const HotelProfile = () => {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Hotel Profile" subtitle="Manage your hotel information and settings" />
+      <PageHeader title="Hotel Profile" subtitle="Manage your hotel information and settings">
+        {user?.user_id && <Badge variant="neutral">Partner ID: {user.user_id}</Badge>}
+      </PageHeader>
 
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200">
-        <div className="border-b border-slate-200 overflow-x-auto">
+      <div className="bg-white rounded-2xl shadow-sm border border-brand-border">
+        <div className="border-b border-brand-border overflow-x-auto">
           <div className="flex min-w-max">
             {TABS.map((tab) => {
               const Icon = tab.icon;
@@ -442,7 +445,7 @@ const HotelProfile = () => {
                   onClick={() => { setActiveTab(tab.key); setSaveStatus(null); }}
                   className={`flex items-center gap-2 px-5 py-3.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
                     activeTab === tab.key
-                      ? "border-blue-600 text-blue-600"
+                      ? "border-primary text-primary"
                       : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"
                   }`}
                 >
@@ -477,7 +480,7 @@ const HotelProfile = () => {
                   onChange={(e) => setField("description", e.target.value)}
                   rows={8}
                   placeholder="Describe your hotel, its unique features, surroundings, and what makes it special..."
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-y"
+                  className="w-full px-3 py-2 border border-brand-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary resize-y"
                 />
               </div>
               <div className="flex justify-end pt-2"><SaveButton onClick={handleSaveOverview} /></div>
@@ -551,7 +554,7 @@ const HotelProfile = () => {
                   type="text" value={customAmenity} onChange={(e) => setCustomAmenity(e.target.value)}
                   onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCustomAmenity(); } }}
                   placeholder="Add custom amenity..."
-                  className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="flex-1 px-3 py-2 border border-brand-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
                 />
                 <Button variant="secondary" size="sm" onClick={addCustomAmenity}>Add</Button>
               </div>
@@ -564,7 +567,7 @@ const HotelProfile = () => {
               <div>
                 <h3 className="text-sm font-semibold text-slate-700 mb-2">Current profile photo</h3>
                 {existingProfileImage ? (
-                  <img src={existingProfileImage} alt="Profile" className="w-32 h-32 object-cover rounded-xl border border-slate-200" />
+                  <img src={existingProfileImage} alt="Profile" className="w-32 h-32 object-cover rounded-xl border border-brand-border" />
                 ) : (
                   <p className="text-sm text-slate-400 italic">No profile photo set yet.</p>
                 )}
@@ -575,7 +578,7 @@ const HotelProfile = () => {
                 {existingGalleryImages.length > 0 ? (
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
                     {existingGalleryImages.map((url, idx) => (
-                      <img key={idx} src={url} alt={`Gallery ${idx + 1}`} className="aspect-square w-full object-cover rounded-lg border border-slate-200" />
+                      <img key={idx} src={url} alt={`Gallery ${idx + 1}`} className="aspect-square w-full object-cover rounded-lg border border-brand-border" />
                     ))}
                   </div>
                 ) : (
@@ -587,7 +590,7 @@ const HotelProfile = () => {
 
               <div>
                 <h3 className="text-sm font-semibold text-slate-700 mb-2">New profile photo (optional)</h3>
-                <label className="relative flex h-24 w-24 items-center justify-center rounded-xl border-2 border-dashed border-slate-300 cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition-colors overflow-hidden">
+                <label className="relative flex h-24 w-24 items-center justify-center rounded-xl border-2 border-dashed border-brand-border cursor-pointer hover:border-primary hover:bg-tint transition-colors overflow-hidden">
                   {newProfilePreview ? (
                     <img src={newProfilePreview} alt="New profile" className="h-full w-full object-cover" />
                   ) : (
@@ -607,7 +610,7 @@ const HotelProfile = () => {
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
                   {newGalleryPreviews.map((src, idx) => (
                     <div key={idx} className="relative group aspect-square">
-                      <img src={src} alt={`New ${idx + 1}`} className="w-full h-full object-cover rounded-lg border border-slate-200" />
+                      <img src={src} alt={`New ${idx + 1}`} className="w-full h-full object-cover rounded-lg border border-brand-border" />
                       <button
                         type="button" onClick={() => removeGalleryFile(idx)}
                         className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
@@ -616,7 +619,7 @@ const HotelProfile = () => {
                       </button>
                     </div>
                   ))}
-                  <label className="aspect-square flex flex-col items-center justify-center border-2 border-dashed border-slate-300 rounded-lg cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition-colors">
+                  <label className="aspect-square flex flex-col items-center justify-center border-2 border-dashed border-brand-border rounded-xl cursor-pointer hover:border-primary hover:bg-tint transition-colors">
                     <Upload className="h-6 w-6 text-slate-400 mb-1" />
                     <span className="text-xs text-slate-500">Upload</span>
                     <input type="file" accept="image/*" multiple onChange={handleGalleryFilesChange} className="hidden" />

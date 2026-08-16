@@ -1,28 +1,28 @@
 const variantStyles = {
-  success: "bg-green-100 text-green-800",
-  warning: "bg-amber-100 text-amber-800",
-  danger: "bg-red-100 text-red-800",
-  info: "bg-tint text-primary-dark",
-  neutral: "bg-surface text-slate-800",
-  purple: "bg-purple-100 text-purple-800",
+  success: "bg-green-50 text-green-700 border-green-200",
+  warning: "bg-amber-50 text-amber-700 border-amber-200",
+  danger: "bg-red-50 text-red-700 border-red-200",
+  info: "bg-tint text-primary-dark border-primary/20",
+  neutral: "bg-surface text-slate-600 border-brand-border",
+  purple: "bg-purple-50 text-purple-700 border-purple-200",
 };
 
 const Badge = ({ variant = "neutral", children, dot = false, className = "" }) => {
   return (
     <span
-      className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
+      className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${
         variantStyles[variant] || variantStyles.neutral
       } ${className}`}
     >
       {dot && (
         <span
-          className={`w-2 h-2 rounded-full mr-1.5 ${
+          className={`w-1.5 h-1.5 rounded-full mr-1.5 ${
             variant === "success"
-              ? "bg-green-400"
+              ? "bg-green-500"
               : variant === "warning"
-              ? "bg-amber-400"
+              ? "bg-amber-500"
               : variant === "danger"
-              ? "bg-red-400"
+              ? "bg-red-500"
               : variant === "info"
               ? "bg-primary"
               : "bg-slate-400"

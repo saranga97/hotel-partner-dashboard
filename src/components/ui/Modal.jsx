@@ -10,11 +10,11 @@ const Modal = ({ isOpen, onClose, title, children, maxWidth = "max-w-2xl" }) => 
         onClick={onClose}
       />
       <div
-        className={`relative bg-white rounded-2xl shadow-xl w-full ${maxWidth} max-h-[90vh] overflow-hidden mx-4`}
+        className={`relative bg-white rounded-2xl border border-brand-border shadow-xl w-full ${maxWidth} max-h-[90vh] overflow-hidden mx-4`}
       >
         {title && (
           <div className="sticky top-0 bg-white border-b border-brand-border px-6 py-4 rounded-t-2xl flex items-center justify-between z-10">
-            <h2 className="text-xl font-bold text-slate-900">{title}</h2>
+            <h2 className="text-xl font-bold text-slate-900 font-display">{title}</h2>
             <button
               onClick={onClose}
               className="p-2 hover:bg-surface rounded-lg transition-colors"

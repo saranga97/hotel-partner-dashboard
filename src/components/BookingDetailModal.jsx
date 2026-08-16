@@ -1,30 +1,30 @@
 import { X, Calendar, User, Mail, Phone, BedDouble } from "lucide-react";
 import { Modal, Badge } from "./ui";
+import { bookingTotalPrice, formatDate } from "../utils/bookings";
 
 // Read-only detail view — there is no approve/reject workflow on the current
 // backend (every booking is created already status:'booked', no 'pending' state
-// exists to approve). This whole page is showing sample data until a real
-// partner-scoped bookings endpoint exists — see Bookings.jsx.
+// to approve).
 const BookingDetailModal = ({ booking, onClose }) => {
   if (!booking) return null;
 
-  const formatDate = (d) => (d ? new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "N/A");
+  const totalPrice = bookingTotalPrice(booking);
 
   return (
     <Modal isOpen={true} onClose={onClose} maxWidth="max-w-lg">
       <div className="flex items-center justify-between px-6 py-4 border-b border-brand-border">
         <div className="flex items-center gap-3">
-          <h2 className="text-lg font-bold text-slate-900">Booking Details</h2>
+          <h2 className="text-lg font-bold text-slate-900 font-display">Booking Details</h2>
           <Badge variant={booking.status === "booked" ? "success" : "danger"}>{booking.status}</Badge>
         </div>
-        <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
+        <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-surface rounded-lg transition-colors">
           <X className="h-5 w-5" />
         </button>
       </div>
 
       <div className="overflow-y-auto p-6 space-y-5">
         <div className="flex items-start gap-3">
-          <div className="p-2 bg-tint rounded-lg">
+          <div className="p-2.5 bg-tint rounded-xl">
             <BedDouble className="h-5 w-5 text-primary" />
           </div>
           <div>
@@ -39,8 +39,8 @@ const BookingDetailModal = ({ booking, onClose }) => {
           {booking.user?.profileImage ? (
             <img src={booking.user.profileImage} alt={booking.user.firstName} className="w-10 h-10 rounded-full object-cover flex-shrink-0" />
           ) : (
-            <div className="p-2 bg-slate-50 rounded-lg flex-shrink-0">
-              <User className="h-5 w-5 text-slate-600" />
+            <div className="p-2.5 bg-surface rounded-xl flex-shrink-0">
+              <User className="h-5 w-5 text-slate-500" />
             </div>
           )}
           <div>
@@ -69,7 +69,7 @@ const BookingDetailModal = ({ booking, onClose }) => {
           </div>
           <div className="col-span-2">
             <p className="text-xs text-slate-500">Total (per night × nights)</p>
-            <p className="text-lg font-bold text-slate-900">LKR {booking.totalPrice?.toLocaleString()}</p>
+            <p className="text-lg font-bold text-slate-900">{totalPrice != null ? `LKR ${totalPrice.toLocaleString()}` : "N/A"}</p>
           </div>
         </div>
       </div>

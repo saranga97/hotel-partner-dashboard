@@ -1,8 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Menu, Bell, Search, BedDouble, Calendar, Trash2, Pencil } from "lucide-react";
+import { Menu, Bell, BedDouble, Calendar, Trash2, Pencil } from "lucide-react";
 import { useNotifications } from "../context/NotificationContext";
-import { EmptyState } from "./ui";
 
 const Topbar = ({ setSidebarOpen }) => {
   const user = JSON.parse(localStorage.getItem("ceylonstay_user"));
@@ -75,24 +74,10 @@ const Topbar = ({ setSidebarOpen }) => {
           </button>
 
           <div className="hidden sm:block">
-            <h1 className="text-lg font-semibold text-slate-900">
+            <h1 className="text-lg font-semibold text-slate-900 tracking-tight">
               {hotelName}
             </h1>
-            <p className="text-sm text-slate-600">Hotel Management</p>
-          </div>
-        </div>
-
-        {/* Search bar */}
-        <div className="hidden md:flex flex-1 max-w-md mx-8">
-          <div className="relative w-full">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Search className="h-4 w-4 text-slate-400" />
-            </div>
-            <input
-              type="text"
-              placeholder="Search bookings, rooms, guests..."
-              className="w-full pl-10 pr-4 py-2 border border-brand-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-surface hover:bg-white transition-colors duration-200"
-            />
+            <p className="text-xs text-muted">Hotel Management</p>
           </div>
         </div>
 
@@ -101,19 +86,19 @@ const Topbar = ({ setSidebarOpen }) => {
           <div className="relative" ref={dropdownRef}>
             <button
               onClick={() => setShowNotifications(!showNotifications)}
-              className="relative p-2 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-surface focus:outline-none focus:ring-2 focus:ring-primary transition-colors duration-200"
+              className="relative p-2.5 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-surface focus:outline-none focus:ring-2 focus:ring-primary/30 transition-colors duration-200"
             >
               <Bell className="h-5 w-5" />
               {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 h-4 w-4 bg-red-500 rounded-full text-xs text-white flex items-center justify-center">
+                <span className="absolute top-1 right-1 h-4 w-4 bg-primary rounded-full text-[10px] font-semibold text-white flex items-center justify-center">
                   {unreadCount > 9 ? "9+" : unreadCount}
                 </span>
               )}
             </button>
 
             {showNotifications && (
-              <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-xl border border-brand-border overflow-hidden z-50">
-                <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
+              <div className="absolute right-0 mt-2 w-80 bg-white rounded-2xl shadow-xl border border-brand-border overflow-hidden z-50">
+                <div className="flex items-center justify-between px-4 py-3 border-b border-brand-border">
                   <h3 className="text-sm font-semibold text-slate-900">
                     Notifications
                   </h3>
@@ -180,21 +165,6 @@ const Topbar = ({ setSidebarOpen }) => {
                 </div>
               </div>
             )}
-          </div>
-
-          <div className="flex items-center space-x-3 pl-3 border-l border-brand-border">
-            <div className="hidden sm:block text-right">
-              <div className="text-sm font-medium text-slate-900">
-                {hotelName}
-              </div>
-              <div className="text-xs text-slate-600">{user?.user_id}</div>
-            </div>
-            <div className="relative">
-              <button className="w-8 h-8 bg-primary rounded-full text-white flex items-center justify-center text-sm font-semibold shadow-md hover:shadow-lg transition-shadow duration-200">
-                {hotelName.charAt(0).toUpperCase()}
-              </button>
-              <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-400 border-2 border-white rounded-full"></div>
-            </div>
           </div>
         </div>
       </div>
