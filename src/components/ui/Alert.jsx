@@ -19,7 +19,7 @@ const Alert = ({ variant = "error", icon: IconProp, children, className = "" }) 
 
   return (
     <div
-      className={`flex items-center gap-2 p-3 border rounded-lg text-sm ${
+      className={`flex items-center gap-2.5 px-4 py-3 border rounded-xl text-sm leading-snug ${
         variantStyles[variant] || variantStyles.error
       } ${className}`}
     >

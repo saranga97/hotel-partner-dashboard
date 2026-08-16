@@ -161,7 +161,7 @@ const RoomDetailsModal = ({ room, onClose, onRoomUpdated }) => {
   const getSaveButtonStyle = () => {
     if (saveStatus === "success") return "bg-green-600 hover:bg-green-700";
     if (saveStatus === "error") return "bg-red-600 hover:bg-red-700";
-    return "bg-blue-600 hover:bg-blue-700";
+    return "bg-primary hover:bg-primary-dark";
   };
 
   return (
@@ -223,16 +223,16 @@ const RoomDetailsModal = ({ room, onClose, onRoomUpdated }) => {
                     type="text"
                     value={editData.roomName}
                     onChange={(e) => setEditData((d) => ({ ...d, roomName: e.target.value }))}
-                    className="text-xl font-bold text-slate-900 border border-slate-300 rounded-lg px-2 py-1"
+                    className="text-xl font-bold text-slate-900 border border-brand-border rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
                   />
                 ) : (
-                  <h2 className="text-2xl font-bold text-slate-900">{editData.roomName}</h2>
+                  <h2 className="text-2xl font-bold text-slate-900 font-display">{editData.roomName}</h2>
                 )}
                 {isEditing ? (
                   <select
                     value={editData.roomType}
                     onChange={(e) => setEditData((d) => ({ ...d, roomType: e.target.value }))}
-                    className="px-2.5 py-1 rounded-full text-xs font-medium border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="px-2.5 py-1 rounded-full text-xs font-medium border border-brand-border focus:outline-none focus:ring-2 focus:ring-primary/30"
                   >
                     {ROOM_TYPES.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
                   </select>
@@ -243,7 +243,7 @@ const RoomDetailsModal = ({ room, onClose, onRoomUpdated }) => {
                 )}
               </div>
               {!isEditing ? (
-                <button onClick={() => setIsEditing(true)} className="p-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Edit room">
+                <button onClick={() => setIsEditing(true)} className="p-2 text-slate-500 hover:text-primary hover:bg-tint rounded-lg transition-colors" title="Edit room">
                   <Pencil className="h-4 w-4" />
                 </button>
               ) : (
@@ -255,7 +255,7 @@ const RoomDetailsModal = ({ room, onClose, onRoomUpdated }) => {
                   <button
                     onClick={handleSave}
                     disabled={saving}
-                    className={`inline-flex items-center gap-1 px-3 py-1.5 text-white rounded-lg text-sm font-medium transition-all disabled:opacity-50 ${getSaveButtonStyle()}`}
+                    className={`inline-flex items-center gap-1 px-3 py-1.5 text-white rounded-xl text-sm font-semibold transition-all disabled:opacity-50 ${getSaveButtonStyle()}`}
                   >
                     {getSaveButtonContent()}
                   </button>
@@ -265,7 +265,7 @@ const RoomDetailsModal = ({ room, onClose, onRoomUpdated }) => {
             {room.hotel?.name && <p className="text-sm text-slate-500">{room.hotel.name}</p>}
           </div>
 
-          <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-200">
+          <div className="flex items-center justify-between p-3 bg-surface rounded-xl border border-brand-border">
             <div className="flex items-center gap-2">
               <div className={`w-2.5 h-2.5 rounded-full ${editData.isTemporaryBlocked ? "bg-red-500" : "bg-green-500"}`} />
               <span className="text-sm text-slate-700">
@@ -286,10 +286,10 @@ const RoomDetailsModal = ({ room, onClose, onRoomUpdated }) => {
             </button>
           </div>
 
-          <div className="p-4 bg-blue-50 rounded-xl border border-blue-100">
+          <div className="p-4 bg-tint rounded-xl border border-primary/15">
             <div className="flex items-center gap-2 mb-2">
-              <Clock className="h-4 w-4 text-blue-600" />
-              <h3 className="text-sm font-semibold text-blue-900">Pricing & Check-in / Check-out</h3>
+              <Clock className="h-4 w-4 text-primary" />
+              <h3 className="text-sm font-semibold text-primary-dark">Pricing & Check-in / Check-out</h3>
             </div>
             {isEditing ? (
               <div className="grid grid-cols-2 gap-3">
@@ -337,7 +337,7 @@ const RoomDetailsModal = ({ room, onClose, onRoomUpdated }) => {
                     <input
                       type="number" min="0" value={bedCounts[value]}
                       onChange={(e) => handleBedCountChange(value, e.target.value)}
-                      className="w-full px-2 py-1.5 border border-slate-300 rounded-lg text-sm text-center"
+                      className="w-full px-2 py-1.5 border border-brand-border rounded-lg text-sm text-center focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
                     />
                   </div>
                 ))}
@@ -400,7 +400,7 @@ const RoomDetailsModal = ({ room, onClose, onRoomUpdated }) => {
                     type="text" value={customAmenity} onChange={(e) => setCustomAmenity(e.target.value)}
                     onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCustomAmenity(); } }}
                     placeholder="Add custom amenity..."
-                    className="flex-1 px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="flex-1 px-2.5 py-1.5 border border-brand-border rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
                   />
                   <Button variant="secondary" size="sm" onClick={addCustomAmenity} className="text-xs px-2.5 py-1.5">Add</Button>
                 </div>
@@ -408,7 +408,7 @@ const RoomDetailsModal = ({ room, onClose, onRoomUpdated }) => {
             ) : selectedAmenities.length > 0 ? (
               <div className="flex flex-wrap gap-2">
                 {selectedAmenities.map((amenity) => (
-                  <span key={amenity} className="px-3 py-1.5 bg-blue-50 text-blue-700 rounded-lg text-xs font-medium">{amenity}</span>
+                  <span key={amenity} className="px-3 py-1.5 bg-tint text-primary-dark rounded-lg text-xs font-medium">{amenity}</span>
                 ))}
               </div>
             ) : (

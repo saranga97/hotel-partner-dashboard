@@ -189,7 +189,7 @@ const AddRoomModal = ({ isOpen, onClose, hotelId, onRoomAdded }) => {
                   min="0"
                   value={bedCounts[value]}
                   onChange={(e) => handleBedCountChange(value, e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-center"
+                  className="w-full px-3 py-2 border border-brand-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary text-center"
                 />
               </div>
             ))}
@@ -241,7 +241,7 @@ const AddRoomModal = ({ isOpen, onClose, hotelId, onRoomAdded }) => {
               type="text" value={customAmenity} onChange={(e) => setCustomAmenity(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCustomAmenity(); } }}
               placeholder="Add custom amenity..."
-              className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+              className="flex-1 px-3 py-2 border border-brand-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
             />
             <Button variant="secondary" size="sm" type="button" onClick={addCustomAmenity}>Add</Button>
           </div>
@@ -264,7 +264,7 @@ const AddRoomModal = ({ isOpen, onClose, hotelId, onRoomAdded }) => {
                 </button>
               </div>
             ))}
-            <label className="aspect-square flex flex-col items-center justify-center border-2 border-dashed border-slate-300 rounded-lg cursor-pointer hover:border-primary hover:bg-tint transition-colors">
+            <label className="aspect-square flex flex-col items-center justify-center border-2 border-dashed border-brand-border rounded-xl cursor-pointer hover:border-primary hover:bg-tint transition-colors">
               <Upload className="h-6 w-6 text-slate-400 mb-1" />
               <span className="text-xs text-slate-500">Upload</span>
               <input type="file" accept="image/*" multiple onChange={handleImageChange} className="hidden" />
@@ -288,7 +288,7 @@ const AddRoomModal = ({ isOpen, onClose, hotelId, onRoomAdded }) => {
           <button
             type="submit"
             disabled={loading || submitStatus === "success"}
-            className={`inline-flex items-center gap-2 px-6 py-2 text-white rounded-lg text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed ${getSubmitButtonStyle()}`}
+            className={`inline-flex items-center gap-2 px-6 py-2.5 text-white rounded-xl text-sm font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed ${getSubmitButtonStyle()}`}
           >
             {getSubmitButtonContent()}
           </button>

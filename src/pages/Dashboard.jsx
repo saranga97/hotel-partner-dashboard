@@ -1,160 +1,138 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { TrendingUp, Users, Calendar, CheckCircle, BedDouble, Ban, Info } from "lucide-react";
+import { TrendingUp, Calendar, CheckCircle, BedDouble, User, ChevronRight } from "lucide-react";
 import axiosInstance from "../api/axiosInstance";
-import { PageHeader, StatCard, LoadingSpinner, Alert, Badge } from "../components/ui";
-import { SAMPLE_BOOKINGS, SAMPLE_STATS } from "../constants/sampleBookings";
+import { PageHeader, StatCard, LoadingSpinner, Alert, EmptyState } from "../components/ui";
+import { bookingTotalPrice, getRelativeTime } from "../utils/bookings";
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const user = JSON.parse(localStorage.getItem("ceylonstay_user") || "null");
   const [rooms, setRooms] = useState([]);
+  const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [dataError, setDataError] = useState(null); // { message, variant } | null
 
   useEffect(() => {
-    const fetchRooms = async () => {
+    const fetchDashboardData = async () => {
       try {
         const hotelsRes = await axiosInstance.get("/hotels/my-hotels");
         const hotel = hotelsRes.data.hotels?.[0];
         if (!hotel) return;
-        const roomsRes = await axiosInstance.get(`/rooms/hotel/${hotel.hotel_id}`, { params: { limit: 100 } });
+
+        const [roomsRes, bookingsRes] = await Promise.all([
+          axiosInstance.get(`/rooms/hotel/${hotel.hotel_id}`, { params: { limit: 100 } }),
+          axiosInstance.get(`/bookings/hotel/${hotel.hotel_id}`, { params: { limit: 100 } }),
+        ]);
         setRooms(roomsRes.data.rooms);
+        setBookings(bookingsRes.data.bookings);
       } catch (err) {
-        console.error("Failed to fetch rooms for dashboard stats", err);
+        console.error("Failed to fetch dashboard data", err);
+        setDataError(
+          err.response?.status === 403
+            ? { message: "You're not authorized to view data for this hotel.", variant: "warning" }
+            : { message: "Couldn't load some dashboard data — showing what's available.", variant: "error" }
+        );
       } finally {
         setLoading(false);
       }
     };
-    fetchRooms();
+    fetchDashboardData();
   }, []);
-
-  const getRelativeTime = (timestamp) => {
-    const diff = Math.floor((Date.now() - new Date(timestamp)) / 1000);
-    if (diff < 60) return "Just now";
-    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-    return `${Math.floor(diff / 86400)}d ago`;
-  };
 
   if (loading) {
     return <LoadingSpinner className="py-24" />;
   }
 
-  // Room stats are real (GET /rooms/hotel/:hotel_id). Booking stats are sample
-  // data — no hotel-owner-scoped bookings endpoint exists yet.
-  const statCards = [
-    { title: "Total Rooms", value: rooms.length, icon: BedDouble, lightColor: "bg-tint", textColor: "text-primary" },
-    { title: "Available Rooms", value: rooms.filter((r) => !r.isTemporaryBlocked).length, icon: CheckCircle, lightColor: "bg-emerald-50", textColor: "text-emerald-600" },
-    { title: "Total Bookings (sample)", value: SAMPLE_STATS.totalBookings, icon: Calendar, lightColor: "bg-orange-50", textColor: "text-orange-600" },
-    { title: "Active Bookings (sample)", value: SAMPLE_STATS.activeBookings, icon: TrendingUp, lightColor: "bg-purple-50", textColor: "text-purple-600" },
-  ];
+  const activeBookings = bookings.filter((b) => b.status === "booked").length;
+  const recentBookings = [...bookings]
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+    .slice(0, 5);
 
-  const familyRooms = rooms.filter((r) => r.roomType === "FAMILY").length;
-  const coupleRooms = rooms.filter((r) => r.roomType === "COUPLE").length;
-  const blockedRooms = rooms.filter((r) => r.isTemporaryBlocked).length;
+  // Ordered by what a partner actually needs to act on first: active
+  // reservations right now, then room availability, then the lower-priority
+  // running totals. Only Active Bookings and Available Rooms carry semantic
+  // color (they're a status); the two running totals stay neutral so the
+  // row doesn't read as an arbitrary rainbow. Each tile is clickable and
+  // jumps to where it's managed.
+  const statCards = [
+    { title: "Active Bookings", value: activeBookings, icon: TrendingUp, lightColor: "bg-tint", textColor: "text-primary", onClick: () => navigate("/bookings"), highlight: true },
+    { title: "Available Rooms", value: rooms.filter((r) => !r.isTemporaryBlocked).length, icon: CheckCircle, lightColor: "bg-emerald-50", textColor: "text-emerald-600", onClick: () => navigate("/rooms") },
+    { title: "Total Bookings", value: bookings.length, icon: Calendar, lightColor: "bg-surface", textColor: "text-slate-500", onClick: () => navigate("/bookings") },
+    { title: "Total Rooms", value: rooms.length, icon: BedDouble, lightColor: "bg-surface", textColor: "text-slate-500", onClick: () => navigate("/rooms") },
+  ];
 
   return (
     <div className="space-y-8">
-      <PageHeader title="Dashboard" subtitle="Overview of your hotel performance">
-        <Badge variant="success" dot>All systems operational</Badge>
-      </PageHeader>
+      <PageHeader
+        title={user?.firstName ? `Welcome back, ${user.firstName}` : "Welcome back"}
+        subtitle="Here's what's happening with your hotel today."
+      />
+
+      {dataError && <Alert variant={dataError.variant}>{dataError.message}</Alert>}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
         {statCards.map((stat, index) => (
-          <StatCard key={index} icon={stat.icon} value={stat.value} label={stat.title} lightColor={stat.lightColor} textColor={stat.textColor} />
+          <StatCard
+            key={index}
+            icon={stat.icon}
+            value={stat.value}
+            label={stat.title}
+            lightColor={stat.lightColor}
+            textColor={stat.textColor}
+            onClick={stat.onClick}
+            highlight={stat.highlight}
+          />
         ))}
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white rounded-xl shadow-sm border border-brand-border p-5">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-green-50 rounded-lg"><Users className="h-5 w-5 text-green-600" /></div>
-            <div>
-              <p className="text-2xl font-bold text-slate-900">{familyRooms}</p>
-              <p className="text-sm text-slate-600">Family Rooms</p>
-            </div>
-          </div>
+      <div className="bg-white rounded-2xl shadow-sm border border-brand-border p-6">
+        <div className="flex items-center justify-between mb-5">
+          <h3 className="text-base font-semibold text-slate-900">Recent Bookings</h3>
+          {bookings.length > 0 && (
+            <button
+              onClick={() => navigate("/bookings")}
+              className="text-sm font-medium text-primary hover:text-primary-dark flex items-center gap-0.5 transition-colors"
+            >
+              View all
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          )}
         </div>
-        <div className="bg-white rounded-xl shadow-sm border border-brand-border p-5">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-purple-50 rounded-lg"><Users className="h-5 w-5 text-purple-600" /></div>
-            <div>
-              <p className="text-2xl font-bold text-slate-900">{coupleRooms}</p>
-              <p className="text-sm text-slate-600">Couple Rooms</p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white rounded-xl shadow-sm border border-brand-border p-5">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-red-50 rounded-lg"><Ban className="h-5 w-5 text-red-600" /></div>
-            <div>
-              <p className="text-2xl font-bold text-slate-900">{blockedRooms}</p>
-              <p className="text-sm text-slate-600">Blocked Rooms</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-white rounded-xl shadow-sm border border-brand-border p-6">
-          <div className="flex items-center justify-between mb-1">
-            <h3 className="text-lg font-semibold text-slate-900">Recent Bookings</h3>
-          </div>
-          <Alert variant="info" icon={Info} className="mb-4">
-            Sample data — connects to live bookings once the backend adds a partner bookings endpoint.
-          </Alert>
-          <div className="space-y-3">
-            {SAMPLE_BOOKINGS.map((booking) => (
-              <div key={booking.booking_id} className="flex items-center justify-between py-2">
-                <div className="flex items-center gap-3">
-                  <div className={`w-2.5 h-2.5 rounded-full ${booking.status === "booked" ? "bg-green-500" : "bg-red-500"}`} />
-                  <div>
-                    <p className="text-sm text-slate-700">
-                      <span className="font-medium">{booking.room.roomName}</span>
-                    </p>
-                    <p className="text-xs text-slate-500">{booking.user.firstName} {booking.user.lastName}</p>
+        {recentBookings.length === 0 ? (
+          <EmptyState icon={Calendar} message="No bookings yet" description="New reservations will show up here" />
+        ) : (
+          <div className="divide-y divide-brand-border">
+            {recentBookings.map((booking) => {
+              const totalPrice = bookingTotalPrice(booking);
+              const guestName = booking.user ? `${booking.user.firstName} ${booking.user.lastName}` : "Guest";
+              return (
+                <button
+                  key={booking.booking_id}
+                  onClick={() => navigate(`/bookings?bookingId=${booking._id}`)}
+                  className="w-full flex items-center justify-between gap-3 py-3.5 text-left rounded-xl hover:bg-surface px-2 -mx-2 transition-colors"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-9 h-9 rounded-full bg-tint flex items-center justify-center flex-shrink-0">
+                      <User className="h-4 w-4 text-primary" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-slate-900 truncate">{guestName}</p>
+                      <p className="text-xs text-muted truncate">
+                        {booking.room?.roomName || "Room removed"}
+                        {booking.status === "cancelled" && <span className="text-red-500"> · Cancelled</span>}
+                      </p>
+                    </div>
                   </div>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm font-medium text-slate-900">LKR {booking.totalPrice.toLocaleString()}</p>
-                  <p className="text-xs text-slate-400">{getRelativeTime(booking.createdAt)}</p>
-                </div>
-              </div>
-            ))}
+                  <div className="text-right flex-shrink-0">
+                    <p className="text-sm font-semibold text-slate-900 tabular-nums">{totalPrice != null ? `LKR ${totalPrice.toLocaleString()}` : "—"}</p>
+                    <p className="text-xs text-slate-400">{getRelativeTime(booking.createdAt)}</p>
+                  </div>
+                </button>
+              );
+            })}
           </div>
-        </div>
-
-        <div className="bg-white rounded-xl shadow-sm border border-brand-border p-6">
-          <h3 className="text-lg font-semibold text-slate-900 mb-4">Quick Actions</h3>
-          <div className="space-y-3">
-            <button onClick={() => navigate("/rooms")} className="w-full text-left px-4 py-3 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors duration-200">
-              <div className="flex items-center gap-3">
-                <BedDouble className="h-5 w-5 text-emerald-600" />
-                <div>
-                  <div className="text-sm font-medium text-emerald-900">Manage Rooms</div>
-                  <div className="text-xs text-emerald-700 mt-0.5">Add, edit, or block rooms</div>
-                </div>
-              </div>
-            </button>
-            <button onClick={() => navigate("/bookings")} className="w-full text-left px-4 py-3 bg-tint hover:bg-[#ffe8df] rounded-lg transition-colors duration-200">
-              <div className="flex items-center gap-3">
-                <Calendar className="h-5 w-5 text-primary" />
-                <div>
-                  <div className="text-sm font-medium text-primary-dark">View Bookings</div>
-                  <div className="text-xs text-primary mt-0.5">Manage all reservations</div>
-                </div>
-              </div>
-            </button>
-            <button onClick={() => navigate("/analytics")} className="w-full text-left px-4 py-3 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors duration-200">
-              <div className="flex items-center gap-3">
-                <TrendingUp className="h-5 w-5 text-purple-600" />
-                <div>
-                  <div className="text-sm font-medium text-purple-900">View Analytics</div>
-                  <div className="text-xs text-purple-700 mt-0.5">Check performance insights</div>
-                </div>
-              </div>
-            </button>
-          </div>
-        </div>
+        )}
       </div>
     </div>
   );

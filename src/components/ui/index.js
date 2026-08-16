@@ -2,6 +2,7 @@ export { default as Button } from "./Button";
 export { default as FormInput } from "./FormInput";
 export { default as FormSelect } from "./FormSelect";
 export { default as Modal } from "./Modal";
+export { default as ConfirmDialog } from "./ConfirmDialog";
 export { default as StatCard } from "./StatCard";
 export { default as Badge } from "./Badge";
 export { default as Alert } from "./Alert";

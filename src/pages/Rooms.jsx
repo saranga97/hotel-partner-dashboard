@@ -15,6 +15,7 @@ const Rooms = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState("all");
   const [loadError, setLoadError] = useState("");
+  const [loadErrorVariant, setLoadErrorVariant] = useState("error");
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [roomFeedback, setRoomFeedback] = useState({});
@@ -34,6 +35,7 @@ const Rooms = () => {
     try {
       setLoading(true);
       setLoadError("");
+      setLoadErrorVariant("error");
       const hotelsRes = await axiosInstance.get("/hotels/my-hotels");
       const hotel = hotelsRes.data.hotels?.[0];
       if (!hotel) { setRooms([]); return; }
@@ -41,8 +43,14 @@ const Rooms = () => {
 
       const roomsRes = await axiosInstance.get(`/rooms/hotel/${hotel.hotel_id}`, { params: { limit: 100 } });
       setRooms(roomsRes.data.rooms);
-    } catch {
-      setLoadError("Failed to load rooms. Please refresh the page.");
+    } catch (err) {
+      if (err.response?.status === 403) {
+        setLoadErrorVariant("warning");
+        setLoadError("You're not authorized to view rooms for this hotel.");
+      } else {
+        setLoadErrorVariant("error");
+        setLoadError("Failed to load rooms. Please refresh the page.");
+      }
     } finally {
       setLoading(false);
     }
@@ -106,10 +114,13 @@ const Rooms = () => {
   const coupleCount = rooms.filter((r) => r.roomType === "COUPLE").length;
   const blockedCount = rooms.filter((r) => r.isTemporaryBlocked).length;
 
+  // Family/Couple mirror the badge colors used on the room cards below
+  // (success green / purple) so the same room type always reads the same
+  // color everywhere on this page.
   const roomStats = [
-    { label: "Total Rooms", value: rooms.length, color: "bg-blue-500" },
+    { label: "Total Rooms", value: rooms.length, color: "bg-primary" },
     { label: "Family", value: familyCount, color: "bg-green-500" },
-    { label: "Couple", value: coupleCount, color: "bg-orange-500" },
+    { label: "Couple", value: coupleCount, color: "bg-purple-500" },
     { label: "Blocked", value: blockedCount, color: "bg-red-500" },
   ];
 
@@ -139,7 +150,7 @@ const Rooms = () => {
         ))}
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+      <div className="bg-white rounded-2xl shadow-sm border border-brand-border p-6">
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="flex-1">
             <div className="relative">
@@ -149,7 +160,7 @@ const Rooms = () => {
                 placeholder="Search rooms by name..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full pl-10 pr-4 py-2.5 text-sm border border-brand-border rounded-xl transition-colors hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
               />
             </div>
           </div>
@@ -157,7 +168,7 @@ const Rooms = () => {
             <select
               value={filterType}
               onChange={(e) => setFilterType(e.target.value)}
-              className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="px-3.5 py-2.5 border border-brand-border rounded-xl text-sm transition-colors hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
             >
               <option value="all">All Types</option>
               <option value="FAMILY">Family</option>
@@ -167,14 +178,14 @@ const Rooms = () => {
         </div>
       </div>
 
-      {loadError && <Alert variant="error" className="rounded-xl">{loadError}</Alert>}
+      {loadError && <Alert variant={loadErrorVariant}>{loadError}</Alert>}
 
       {loading ? (
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-12">
+        <div className="bg-white rounded-2xl shadow-sm border border-brand-border p-12">
           <LoadingSpinner message="Loading rooms..." />
         </div>
       ) : filteredRooms.length === 0 ? (
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-12">
+        <div className="bg-white rounded-2xl shadow-sm border border-brand-border p-12">
           <EmptyState
             icon={BedDouble}
             message={rooms.length === 0 ? "No rooms yet" : "No rooms match your search"}
@@ -199,7 +210,7 @@ const Rooms = () => {
             <div
               key={room.room_id}
               onClick={() => setSelectedRoom(room)}
-              className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden cursor-pointer hover:shadow-md transition-shadow duration-200"
+              className="bg-white rounded-2xl shadow-sm border border-brand-border overflow-hidden cursor-pointer hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
             >
               <div className="relative h-48 bg-slate-100">
                 {room.images && room.images.length > 0 ? (
@@ -300,12 +311,12 @@ const Rooms = () => {
                   <div className="pt-2 border-t border-slate-100">
                     <div className="flex flex-wrap gap-1">
                       {room.amenities.slice(0, 4).map((amenity) => (
-                        <span key={amenity} className="px-2 py-0.5 bg-blue-50 text-blue-700 rounded text-xs">
+                        <span key={amenity} className="px-2 py-0.5 bg-tint text-primary-dark rounded-md text-xs">
                           {amenity}
                         </span>
                       ))}
                       {room.amenities.length > 4 && (
-                        <span className="px-2 py-0.5 bg-slate-100 text-slate-500 rounded text-xs">
+                        <span className="px-2 py-0.5 bg-surface text-slate-500 rounded-md text-xs">
                           +{room.amenities.length - 4} more
                         </span>
                       )}
