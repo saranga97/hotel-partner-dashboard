@@ -63,7 +63,7 @@ const Topbar = ({ setSidebarOpen }) => {
 
   return (
     <div className="sticky top-0 z-30 bg-white border-b border-brand-border shadow-sm">
-      <div className="flex items-center justify-between px-4 sm:px-6 lg:px-8 py-4">
+      <div className="flex items-center justify-between px-4 sm:px-6 lg:px-8 py-2.5">
         {/* Left section */}
         <div className="flex items-center space-x-4">
           <button
@@ -73,12 +73,9 @@ const Topbar = ({ setSidebarOpen }) => {
             <Menu className="h-5 w-5" />
           </button>
 
-          <div className="hidden sm:block">
-            <h1 className="text-lg font-semibold text-slate-900 tracking-tight">
-              {hotelName}
-            </h1>
-            <p className="text-xs text-muted">Hotel Management</p>
-          </div>
+          <h1 className="hidden sm:block text-lg font-semibold text-slate-900 tracking-tight">
+            {hotelName}
+          </h1>
         </div>
 
         {/* Right section */}
@@ -86,7 +83,7 @@ const Topbar = ({ setSidebarOpen }) => {
           <div className="relative" ref={dropdownRef}>
             <button
               onClick={() => setShowNotifications(!showNotifications)}
-              className="relative p-2.5 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-surface focus:outline-none focus:ring-2 focus:ring-primary/30 transition-colors duration-200"
+              className="relative p-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-surface focus:outline-none focus:ring-2 focus:ring-primary/30 transition-colors duration-200"
             >
               <Bell className="h-5 w-5" />
               {unreadCount > 0 && (

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
-import { BedDouble, Plus, Search, Trash2, Image, Clock, Check, AlertCircle, Users, Snowflake } from "lucide-react";
+import { BedDouble, Plus, Search, Trash2, Image, Clock, Check, AlertCircle, Users, Snowflake, Ban } from "lucide-react";
 import axiosInstance from "../api/axiosInstance";
 import AddRoomModal from "../components/AddRoomModal";
 import RoomDetailsModal from "../components/RoomDetailsModal";
@@ -123,10 +123,10 @@ const Rooms = () => {
   // (success green / purple) so the same room type always reads the same
   // color everywhere on this page.
   const roomStats = [
-    { label: "Total Rooms", value: rooms.length, color: "bg-primary" },
-    { label: "Family", value: familyCount, color: "bg-green-500" },
-    { label: "Couple", value: coupleCount, color: "bg-purple-500" },
-    { label: "Blocked", value: blockedCount, color: "bg-red-500" },
+    { label: "Total Rooms", value: rooms.length, icon: BedDouble, lightColor: "bg-tint", textColor: "text-primary" },
+    { label: "Family", value: familyCount, icon: Users, lightColor: "bg-emerald-50", textColor: "text-emerald-600" },
+    { label: "Couple", value: coupleCount, icon: Users, lightColor: "bg-purple-50", textColor: "text-purple-600" },
+    { label: "Blocked", value: blockedCount, icon: Ban, lightColor: "bg-red-50", textColor: "text-red-600" },
   ];
 
   const formatTime = (time) => {
@@ -149,38 +149,39 @@ const Rooms = () => {
         </Button>
       </PageHeader>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
         {roomStats.map((stat, index) => (
-          <StatCard key={index} value={stat.value} label={stat.label} color={stat.color} />
+          <StatCard
+            key={index}
+            icon={stat.icon}
+            value={stat.value}
+            label={stat.label}
+            lightColor={stat.lightColor}
+            textColor={stat.textColor}
+          />
         ))}
       </div>
 
-      <div className="bg-white rounded-2xl shadow-sm border border-brand-border p-6">
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="flex-1">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Search rooms by name..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 text-sm border border-brand-border rounded-xl transition-colors hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
-              />
-            </div>
-          </div>
-          <div className="flex gap-3">
-            <select
-              value={filterType}
-              onChange={(e) => setFilterType(e.target.value)}
-              className="px-3.5 py-2.5 border border-brand-border rounded-xl text-sm transition-colors hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
-            >
-              <option value="all">All Types</option>
-              <option value="FAMILY">Family</option>
-              <option value="COUPLE">Couple</option>
-            </select>
-          </div>
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1 max-w-xs">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+          <input
+            type="text"
+            placeholder="Search rooms..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-9 pr-3 py-2 text-sm bg-white border border-brand-border rounded-xl transition-colors placeholder:text-slate-400 hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+          />
         </div>
+        <select
+          value={filterType}
+          onChange={(e) => setFilterType(e.target.value)}
+          className="px-3 py-2 bg-white border border-brand-border rounded-xl text-sm transition-colors hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+        >
+          <option value="all">All Types</option>
+          <option value="FAMILY">Family</option>
+          <option value="COUPLE">Couple</option>
+        </select>
       </div>
 
       {loadError && <Alert variant={loadErrorVariant}>{loadError}</Alert>}
