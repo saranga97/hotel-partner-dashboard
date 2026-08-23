@@ -6,9 +6,10 @@ import {
 } from "lucide-react";
 import { PageHeader, FormInput, FormSelect, Alert, LoadingSpinner, Button, ToggleChip, Badge } from "../components/ui";
 import {
-  HOTEL_TYPES, PLACE_TYPES, BATHROOM_TYPES, BOOKING_METHODS, WHO_ELSE_OPTIONS,
-  COUNTRIES, PREDEFINED_AMENITIES,
+  HOTEL_TYPES, PLACE_TYPES, BATHROOM_TYPES, BOOKING_METHODS, WHO_ELSE_OPTIONS, COUNTRIES,
 } from "../constants/hotel";
+import { HOTEL_AMENITIES } from "../constants/amenities";
+import { getAmenityIcon } from "../constants/amenityIcons";
 
 const TABS = [
   { key: "overview", label: "Overview", icon: Building2 },
@@ -451,8 +452,8 @@ const HotelProfile = () => {
 
             <h3 className="text-sm font-semibold text-slate-700 pt-2">Amenities (optional)</h3>
             <div className="flex flex-wrap gap-2 mb-2">
-              {PREDEFINED_AMENITIES.map((amenity) => (
-                <ToggleChip key={amenity} label={amenity} selected={createForm.amenities.includes(amenity)} onToggle={() => toggleCreateAmenity(amenity)} />
+              {HOTEL_AMENITIES.map((amenity) => (
+                <ToggleChip key={amenity} label={amenity} icon={getAmenityIcon(amenity)} selected={createForm.amenities.includes(amenity)} onToggle={() => toggleCreateAmenity(amenity)} />
               ))}
             </div>
             <div className="flex gap-2">
@@ -673,12 +674,12 @@ const HotelProfile = () => {
             isEditing ? (
               <div className="space-y-5">
                 <div className="flex flex-wrap gap-2 mb-3">
-                  {PREDEFINED_AMENITIES.map((amenity) => (
-                    <ToggleChip key={amenity} label={amenity} selected={form.amenities.includes(amenity)} onToggle={() => toggleAmenity(amenity)} />
+                  {HOTEL_AMENITIES.map((amenity) => (
+                    <ToggleChip key={amenity} label={amenity} icon={getAmenityIcon(amenity)} selected={form.amenities.includes(amenity)} onToggle={() => toggleAmenity(amenity)} />
                   ))}
                 </div>
-                {form.amenities.filter((a) => !PREDEFINED_AMENITIES.includes(a)).map((amenity) => (
-                  <ToggleChip key={amenity} label={amenity} removable onToggle={() => toggleAmenity(amenity)} className="mr-2 mb-2" />
+                {form.amenities.filter((a) => !HOTEL_AMENITIES.includes(a)).map((amenity) => (
+                  <ToggleChip key={amenity} label={amenity} icon={getAmenityIcon(amenity)} removable onToggle={() => toggleAmenity(amenity)} className="mr-2 mb-2" />
                 ))}
                 <div className="flex gap-2">
                   <input
@@ -699,9 +700,15 @@ const HotelProfile = () => {
                 <SectionHeader title="Amenities" onEdit={() => setIsEditing(true)} />
                 {form.amenities.length > 0 ? (
                   <div className="flex flex-wrap gap-2">
-                    {form.amenities.map((amenity) => (
-                      <Badge key={amenity} variant="neutral">{amenity}</Badge>
-                    ))}
+                    {form.amenities.map((amenity) => {
+                      const AmenityIcon = getAmenityIcon(amenity);
+                      return (
+                        <Badge key={amenity} variant="neutral">
+                          <AmenityIcon className="h-3 w-3 mr-1" />
+                          {amenity}
+                        </Badge>
+                      );
+                    })}
                   </div>
                 ) : (
                   <p className="text-sm text-slate-400 italic">No amenities added yet.</p>

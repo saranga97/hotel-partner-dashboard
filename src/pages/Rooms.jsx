@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
-import { BedDouble, Plus, Search, Trash2, Image, Clock, Check, AlertCircle } from "lucide-react";
+import { BedDouble, Plus, Search, Trash2, Image, Clock, Check, AlertCircle, Users, Snowflake } from "lucide-react";
 import axiosInstance from "../api/axiosInstance";
 import AddRoomModal from "../components/AddRoomModal";
 import RoomDetailsModal from "../components/RoomDetailsModal";
 import { PageHeader, StatCard, Alert, LoadingSpinner, EmptyState, Badge, Button } from "../components/ui";
+import { getAmenityIcon } from "../constants/amenityIcons";
 
 const Rooms = () => {
   const [rooms, setRooms] = useState([]);
@@ -224,13 +225,15 @@ const Rooms = () => {
                     <Image className="h-12 w-12 text-slate-300" />
                   </div>
                 )}
-                <div className="absolute top-3 left-3 flex gap-2">
-                  <Badge variant={room.roomType === "FAMILY" ? "success" : "purple"} className="px-2 py-1">
+                <div className="absolute top-3 left-3 flex gap-1.5">
+                  <span className="inline-flex items-center gap-1 px-2 py-1 bg-white/95 backdrop-blur-sm text-slate-700 rounded-md text-xs font-medium shadow-sm">
+                    <Users className="h-3 w-3" />
                     {room.roomType === "FAMILY" ? "Family" : "Couple"}
-                  </Badge>
-                  <Badge variant={room.acType === "AC" ? "info" : "neutral"} className="px-2 py-1">
+                  </span>
+                  <span className="inline-flex items-center gap-1 px-2 py-1 bg-white/95 backdrop-blur-sm text-slate-700 rounded-md text-xs font-medium shadow-sm">
+                    <Snowflake className="h-3 w-3" />
                     {room.acType === "AC" ? "AC" : "Non-AC"}
-                  </Badge>
+                  </span>
                 </div>
                 {room.isOnHold && (
                   <div className="absolute top-3 right-3">
@@ -287,9 +290,9 @@ const Rooms = () => {
                 </div>
 
                 {room.bedTypes && room.bedTypes.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap gap-1.5">
                     {room.bedTypes.filter((bt) => bt.count > 0).map((bt) => (
-                      <span key={bt.type} className="px-2 py-1 bg-slate-100 text-slate-600 rounded-md text-xs">
+                      <span key={bt.type} className="px-2 py-1 bg-slate-100 text-slate-600 rounded-md text-xs font-medium">
                         {bt.count} {bedTypeLabel(bt.type)}
                       </span>
                     ))}
@@ -313,14 +316,18 @@ const Rooms = () => {
 
                 {room.amenities && room.amenities.length > 0 && (
                   <div className="pt-2 border-t border-slate-100">
-                    <div className="flex flex-wrap gap-1">
-                      {room.amenities.slice(0, 4).map((amenity) => (
-                        <span key={amenity} className="px-2 py-0.5 bg-tint text-primary-dark rounded-md text-xs">
-                          {amenity}
-                        </span>
-                      ))}
+                    <div className="flex flex-wrap gap-1.5">
+                      {room.amenities.slice(0, 4).map((amenity) => {
+                        const AmenityIcon = getAmenityIcon(amenity);
+                        return (
+                          <span key={amenity} className="inline-flex items-center gap-1 px-2 py-1 bg-slate-100 text-slate-600 rounded-md text-xs font-medium">
+                            <AmenityIcon className="h-3 w-3" />
+                            {amenity}
+                          </span>
+                        );
+                      })}
                       {room.amenities.length > 4 && (
-                        <span className="px-2 py-0.5 bg-surface text-slate-500 rounded-md text-xs">
+                        <span className="px-2 py-1 bg-slate-100 text-slate-500 rounded-md text-xs font-medium">
                           +{room.amenities.length - 4} more
                         </span>
                       )}

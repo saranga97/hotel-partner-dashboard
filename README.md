@@ -108,7 +108,9 @@ src/
 │   ├── Bookings.jsx            — Real bookings table (GET /bookings/hotel/:hotel_id) with search/status filter, detail modal
 │   └── Analytics.jsx           — "Coming soon" placeholder (honest — no fabricated stats)
 ├── constants/
-│   └── hotel.js                 — Enum label lists (HOTEL_TYPES, ROOM_TYPES, BED_TYPES, etc.) mirroring tripora-backend's ALLOWED_* arrays exactly, plus the COUNTRIES list
+│   ├── hotel.js                 — Enum label lists (HOTEL_TYPES, ROOM_TYPES, BED_TYPES, etc.) mirroring tripora-backend's ALLOWED_* arrays exactly, plus the COUNTRIES list
+│   ├── amenities.js              — HOTEL_AMENITIES / ROOM_AMENITIES option lists. ⚠️ Mirrored byte-for-byte in tripora-frontend/src/constants/amenities.js — edit one, edit both
+│   └── amenityIcons.js           — AMENITY_ICONS map + getAmenityIcon() lookup. ⚠️ Mirrored byte-for-byte in tripora-frontend/src/constants/amenityIcons.js — edit one, edit both
 ├── utils/
 │   └── bookings.js              — Shared helpers (nightsBetween, bookingTotalPrice, formatDate, getRelativeTime) for real Booking documents, used by Dashboard/Bookings/BookingDetailModal
 └── index.css                   — Tailwind v4 @theme tokens + global styles

@@ -3,9 +3,9 @@ import { Upload, Image, Clock, Coffee, Check, AlertCircle, X } from "lucide-reac
 import axiosInstance from "../api/axiosInstance";
 import { useNotifications } from "../context/NotificationContext";
 import { Modal, FormInput, FormSelect, Button, Alert, ToggleChip } from "./ui";
-import {
-  ROOM_TYPES, AC_TYPES, FLOOR_TYPES, BED_TYPES, PREDEFINED_ROOM_AMENITIES,
-} from "../constants/hotel";
+import { ROOM_TYPES, AC_TYPES, FLOOR_TYPES, BED_TYPES } from "../constants/hotel";
+import { ROOM_AMENITIES } from "../constants/amenities";
+import { getAmenityIcon } from "../constants/amenityIcons";
 
 const MIN_ROOM_IMAGES = 5;
 
@@ -229,12 +229,12 @@ const AddRoomModal = ({ isOpen, onClose, hotelId, onRoomAdded }) => {
             <label className="block text-sm font-medium text-slate-700">Room Amenities</label>
           </div>
           <div className="flex flex-wrap gap-2 mb-3">
-            {PREDEFINED_ROOM_AMENITIES.map((amenity) => (
-              <ToggleChip key={amenity} label={amenity} selected={selectedAmenities.includes(amenity)} onToggle={() => toggleAmenity(amenity)} />
+            {ROOM_AMENITIES.map((amenity) => (
+              <ToggleChip key={amenity} label={amenity} icon={getAmenityIcon(amenity)} selected={selectedAmenities.includes(amenity)} onToggle={() => toggleAmenity(amenity)} />
             ))}
           </div>
-          {selectedAmenities.filter((a) => !PREDEFINED_ROOM_AMENITIES.includes(a)).map((amenity) => (
-            <ToggleChip key={amenity} label={amenity} removable onToggle={() => toggleAmenity(amenity)} className="mr-2 mb-2" />
+          {selectedAmenities.filter((a) => !ROOM_AMENITIES.includes(a)).map((amenity) => (
+            <ToggleChip key={amenity} label={amenity} icon={getAmenityIcon(amenity)} removable onToggle={() => toggleAmenity(amenity)} className="mr-2 mb-2" />
           ))}
           <div className="flex gap-2">
             <input

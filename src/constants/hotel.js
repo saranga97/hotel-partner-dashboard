@@ -1,4 +1,6 @@
 // Mirrors the ALLOWED_* enums in tripora-backend/models/Hotel.js and Room.js exactly.
+// Amenity option lists live in constants/amenities.js, and their icons in
+// constants/amenityIcons.js — kept separate so each can be edited independently.
 
 export const HOTEL_TYPES = [
   { value: "HOMESTAY", label: "Homestay" },
@@ -100,19 +102,4 @@ export const COUNTRIES = [
   { iso: "GB", name: "United Kingdom" },
   { iso: "US", name: "United States" },
   { iso: "VN", name: "Vietnam" },
-];
-
-export const PREDEFINED_AMENITIES = [
-  "Swimming Pool", "Spa", "Fitness Center", "Restaurant", "Bar",
-  "Room Service", "Free WiFi", "Free Parking", "Airport Shuttle",
-  "Laundry Service", "24-Hour Front Desk", "Concierge", "Garden",
-  "Terrace", "Library", "Business Center", "Meeting Rooms",
-  "Kids Play Area", "BBQ Facilities", "Bicycle Rental",
-];
-
-export const PREDEFINED_ROOM_AMENITIES = [
-  "TV", "Smart TV", "Smart TV with Netflix", "Smoking Allowed", "No Smoking",
-  "Tea/Coffee Maker", "WiFi", "Breakfast Included",
-  "Clothes Rack", "Electric Kettle", "Telephone",
-  "Iron", "Hairdryer", "Desk", "Sitting Area", "Towels", "Bathtub", "Refrigerator",
 ];
