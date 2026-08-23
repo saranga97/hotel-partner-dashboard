@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import axiosInstance from "../api/axiosInstance";
 import {
   Building2, Image, MapPin, Users, DollarSign, Coffee,
-  Upload, X, Save, Loader2, Check, AlertCircle, Camera,
+  Upload, X, Save, Loader2, Check, AlertCircle, Camera, Pencil,
 } from "lucide-react";
 import { PageHeader, FormInput, FormSelect, Alert, LoadingSpinner, Button, ToggleChip, Badge } from "../components/ui";
 import {
@@ -29,6 +29,39 @@ const parseBasePrice = (basePrice) => {
   return isNaN(parsed) ? "" : parsed;
 };
 
+const labelFor = (options, value) => options.find((o) => o.value === value)?.label || "—";
+const countryName = (iso) => COUNTRIES.find((c) => c.iso === iso)?.name || iso || "—";
+const formatTimeDisplay = (time) => {
+  if (!time) return "—";
+  const [h, m] = time.split(":");
+  const hour = parseInt(h, 10);
+  const ampm = hour >= 12 ? "PM" : "AM";
+  const displayHour = hour % 12 || 12;
+  return `${displayHour}:${m} ${ampm}`;
+};
+
+// Read-only label/value pair used in each tab's view mode.
+const InfoField = ({ label, value, className = "" }) => (
+  <div className={className}>
+    <p className="text-xs font-medium text-muted uppercase tracking-wide mb-1">{label}</p>
+    <p className="text-sm text-slate-900 whitespace-pre-wrap">
+      {value || value === 0 ? value : <span className="text-slate-400 italic">Not set</span>}
+    </p>
+  </div>
+);
+
+// Section title + "Edit" button, paired on one row (title left, action right)
+// rather than the button floating alone — the header a tab's read-only view opens with.
+const SectionHeader = ({ title, onEdit }) => (
+  <div className="flex items-center justify-between pb-4 border-b border-brand-border">
+    <h3 className="text-sm font-semibold text-slate-900">{title}</h3>
+    <Button variant="secondary" size="sm" onClick={onEdit}>
+      <Pencil className="h-3.5 w-3.5" />
+      Edit
+    </Button>
+  </div>
+);
+
 const emptyFormState = {
   name: "", description: "", hotelType: "", placeType: "", starRating: "",
   country: "LK", streetAddress: "", apartmentNumber: "", city: "", province: "", postalCode: "", contactNumber: "",
@@ -53,6 +86,11 @@ const HotelProfile = () => {
 
   const [saveStatus, setSaveStatus] = useState(null);
   const [saveMessage, setSaveMessage] = useState("");
+
+  // View-vs-edit mode for the detail tabs (Overview/Location/Guests/Pricing/Amenities) —
+  // details are shown read-only until the user clicks "Edit"; Gallery keeps its own
+  // always-visible upload UI since it's a different interaction pattern.
+  const [isEditing, setIsEditing] = useState(false);
 
   const [form, setForm] = useState(emptyFormState);
   const setField = (field, value) => setForm((f) => ({ ...f, [field]: value }));
@@ -128,11 +166,28 @@ const HotelProfile = () => {
       setHotel(res.data.hotel);
       populateState(res.data.hotel);
       showSaveFeedback("success", "Saved successfully!");
+      // Briefly show the "Saved successfully!" state on the button, then drop back
+      // to the read-only view — same pattern as inline-edit sections elsewhere.
+      setTimeout(() => setIsEditing(false), 900);
     } catch (err) {
       showSaveFeedback("error", err.response?.data?.message || err.response?.data?.error || "Failed to save");
     } finally {
       setSaving(false);
     }
+  };
+
+  // Discards any unsaved changes in the form and drops back to the read-only view.
+  const handleCancelEdit = () => {
+    if (hotel) populateState(hotel);
+    setCustomAmenity("");
+    setSaveStatus(null);
+    setIsEditing(false);
+  };
+
+  const handleTabChange = (key) => {
+    if (isEditing) handleCancelEdit();
+    setSaveStatus(null);
+    setActiveTab(key);
   };
 
   const handleSaveOverview = () => saveSection({
@@ -442,7 +497,7 @@ const HotelProfile = () => {
               return (
                 <button
                   key={tab.key}
-                  onClick={() => { setActiveTab(tab.key); setSaveStatus(null); }}
+                  onClick={() => handleTabChange(tab.key)}
                   className={`flex items-center gap-2 px-5 py-3.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
                     activeTab === tab.key
                       ? "border-primary text-primary"
@@ -459,107 +514,200 @@ const HotelProfile = () => {
 
         <div className="p-6">
           {activeTab === "overview" && (
-            <div className="space-y-5">
-              <FormInput label="Property name" value={form.name} onChange={(e) => setField("name", e.target.value)} />
-              <div className="grid grid-cols-2 gap-4">
-                <FormSelect label="Property type" value={form.hotelType} onChange={(e) => setField("hotelType", e.target.value)}>
-                  {HOTEL_TYPES.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            isEditing ? (
+              <div className="space-y-5">
+                <FormInput label="Property name" value={form.name} onChange={(e) => setField("name", e.target.value)} />
+                <div className="grid grid-cols-2 gap-4">
+                  <FormSelect label="Property type" value={form.hotelType} onChange={(e) => setField("hotelType", e.target.value)}>
+                    {HOTEL_TYPES.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                  </FormSelect>
+                  <FormSelect label="Guests will have" value={form.placeType} onChange={(e) => setField("placeType", e.target.value)}>
+                    {PLACE_TYPES.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                  </FormSelect>
+                </div>
+                <FormSelect label="Star rating (optional)" value={form.starRating} onChange={(e) => setField("starRating", e.target.value)}>
+                  <option value="">Not rated</option>
+                  {[1, 2, 3, 4, 5].map((n) => <option key={n} value={n}>{n} star{n > 1 ? "s" : ""}</option>)}
                 </FormSelect>
-                <FormSelect label="Guests will have" value={form.placeType} onChange={(e) => setField("placeType", e.target.value)}>
-                  {PLACE_TYPES.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                </FormSelect>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Description</label>
+                  <textarea
+                    value={form.description}
+                    onChange={(e) => setField("description", e.target.value)}
+                    rows={8}
+                    placeholder="Describe your hotel, its unique features, surroundings, and what makes it special..."
+                    className="w-full px-3 py-2 border border-brand-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary resize-y"
+                  />
+                </div>
+                <div className="flex justify-end gap-3 pt-2">
+                  <Button variant="secondary" onClick={handleCancelEdit}>Cancel</Button>
+                  <SaveButton onClick={handleSaveOverview} />
+                </div>
               </div>
-              <FormSelect label="Star rating (optional)" value={form.starRating} onChange={(e) => setField("starRating", e.target.value)}>
-                <option value="">Not rated</option>
-                {[1, 2, 3, 4, 5].map((n) => <option key={n} value={n}>{n} star{n > 1 ? "s" : ""}</option>)}
-              </FormSelect>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Description</label>
-                <textarea
-                  value={form.description}
-                  onChange={(e) => setField("description", e.target.value)}
-                  rows={8}
-                  placeholder="Describe your hotel, its unique features, surroundings, and what makes it special..."
-                  className="w-full px-3 py-2 border border-brand-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary resize-y"
-                />
+            ) : (
+              <div className="space-y-5">
+                <SectionHeader title="Property Details" onEdit={() => setIsEditing(true)} />
+                <InfoField label="Property name" value={form.name} />
+                <div className="grid grid-cols-2 gap-4">
+                  <InfoField label="Property type" value={labelFor(HOTEL_TYPES, form.hotelType)} />
+                  <InfoField label="Guests will have" value={labelFor(PLACE_TYPES, form.placeType)} />
+                </div>
+                <InfoField label="Star rating" value={form.starRating ? `${form.starRating} star${form.starRating > 1 ? "s" : ""}` : ""} />
+                <InfoField label="Description" value={form.description} />
               </div>
-              <div className="flex justify-end pt-2"><SaveButton onClick={handleSaveOverview} /></div>
-            </div>
+            )
           )}
 
           {activeTab === "location" && (
-            <div className="space-y-5">
-              <FormInput label="Apartment / unit (optional)" value={form.apartmentNumber} onChange={(e) => setField("apartmentNumber", e.target.value)} />
-              <FormInput label="Street address" value={form.streetAddress} onChange={(e) => setField("streetAddress", e.target.value)} />
-              <div className="grid grid-cols-2 gap-4">
-                <FormInput label="City" value={form.city} onChange={(e) => setField("city", e.target.value)} />
-                <FormInput label="Postal code (optional)" value={form.postalCode} onChange={(e) => setField("postalCode", e.target.value)} />
+            isEditing ? (
+              <div className="space-y-5">
+                <FormInput label="Apartment / unit (optional)" value={form.apartmentNumber} onChange={(e) => setField("apartmentNumber", e.target.value)} />
+                <FormInput label="Street address" value={form.streetAddress} onChange={(e) => setField("streetAddress", e.target.value)} />
+                <div className="grid grid-cols-2 gap-4">
+                  <FormInput label="City" value={form.city} onChange={(e) => setField("city", e.target.value)} />
+                  <FormInput label="Postal code (optional)" value={form.postalCode} onChange={(e) => setField("postalCode", e.target.value)} />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <FormInput label="Province (optional)" value={form.province} onChange={(e) => setField("province", e.target.value)} />
+                  <FormSelect label="Country" value={form.country} onChange={(e) => setField("country", e.target.value)}>
+                    {COUNTRIES.map((c) => <option key={c.iso} value={c.iso}>{c.name}</option>)}
+                  </FormSelect>
+                </div>
+                <FormInput label="Contact number (optional)" value={form.contactNumber} onChange={(e) => setField("contactNumber", e.target.value)} />
+                <div className="flex justify-end gap-3 pt-2">
+                  <Button variant="secondary" onClick={handleCancelEdit}>Cancel</Button>
+                  <SaveButton onClick={handleSaveLocation} />
+                </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <FormInput label="Province (optional)" value={form.province} onChange={(e) => setField("province", e.target.value)} />
-                <FormSelect label="Country" value={form.country} onChange={(e) => setField("country", e.target.value)}>
-                  {COUNTRIES.map((c) => <option key={c.iso} value={c.iso}>{c.name}</option>)}
-                </FormSelect>
+            ) : (
+              <div className="space-y-5">
+                <SectionHeader title="Location Details" onEdit={() => setIsEditing(true)} />
+                <InfoField label="Apartment / unit" value={form.apartmentNumber} />
+                <InfoField label="Street address" value={form.streetAddress} />
+                <div className="grid grid-cols-2 gap-4">
+                  <InfoField label="City" value={form.city} />
+                  <InfoField label="Postal code" value={form.postalCode} />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <InfoField label="Province" value={form.province} />
+                  <InfoField label="Country" value={countryName(form.country)} />
+                </div>
+                <InfoField label="Contact number" value={form.contactNumber} />
               </div>
-              <FormInput label="Contact number (optional)" value={form.contactNumber} onChange={(e) => setField("contactNumber", e.target.value)} />
-              <div className="flex justify-end pt-2"><SaveButton onClick={handleSaveLocation} /></div>
-            </div>
+            )
           )}
 
           {activeTab === "guests" && (
-            <div className="space-y-5">
-              <FormSelect label="Bathroom" value={form.bathroomType} onChange={(e) => setField("bathroomType", e.target.value)}>
-                {BATHROOM_TYPES.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-              </FormSelect>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Who else might be there</label>
-                <div className="flex flex-wrap gap-2">
-                  {WHO_ELSE_OPTIONS.map((o) => (
-                    <ToggleChip key={o.value} label={o.label} selected={form.whoElseIsThere.includes(o.value)} onToggle={() => toggleWhoElse(o.value)} />
-                  ))}
+            isEditing ? (
+              <div className="space-y-5">
+                <FormSelect label="Bathroom" value={form.bathroomType} onChange={(e) => setField("bathroomType", e.target.value)}>
+                  {BATHROOM_TYPES.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </FormSelect>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Who else might be there</label>
+                  <div className="flex flex-wrap gap-2">
+                    {WHO_ELSE_OPTIONS.map((o) => (
+                      <ToggleChip key={o.value} label={o.label} selected={form.whoElseIsThere.includes(o.value)} onToggle={() => toggleWhoElse(o.value)} />
+                    ))}
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <FormInput label="Check-in time" type="time" value={form.checkInTime} onChange={(e) => setField("checkInTime", e.target.value)} />
+                  <FormInput label="Check-out time" type="time" value={form.checkOutTime} onChange={(e) => setField("checkOutTime", e.target.value)} />
+                </div>
+                <div className="flex justify-end gap-3 pt-2">
+                  <Button variant="secondary" onClick={handleCancelEdit}>Cancel</Button>
+                  <SaveButton onClick={handleSaveGuests} />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <FormInput label="Check-in time" type="time" value={form.checkInTime} onChange={(e) => setField("checkInTime", e.target.value)} />
-                <FormInput label="Check-out time" type="time" value={form.checkOutTime} onChange={(e) => setField("checkOutTime", e.target.value)} />
+            ) : (
+              <div className="space-y-5">
+                <SectionHeader title="Guest Experience" onEdit={() => setIsEditing(true)} />
+                <InfoField label="Bathroom" value={labelFor(BATHROOM_TYPES, form.bathroomType)} />
+                <div>
+                  <p className="text-xs font-medium text-muted uppercase tracking-wide mb-1.5">Who else might be there</p>
+                  {form.whoElseIsThere.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {form.whoElseIsThere.map((v) => (
+                        <Badge key={v} variant="neutral">{labelFor(WHO_ELSE_OPTIONS, v)}</Badge>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-slate-400 italic">Not set</p>
+                  )}
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <InfoField label="Check-in time" value={formatTimeDisplay(form.checkInTime)} />
+                  <InfoField label="Check-out time" value={formatTimeDisplay(form.checkOutTime)} />
+                </div>
               </div>
-              <div className="flex justify-end pt-2"><SaveButton onClick={handleSaveGuests} /></div>
-            </div>
+            )
           )}
 
           {activeTab === "pricing" && (
-            <div className="space-y-5">
-              <div className="grid grid-cols-2 gap-4">
-                <FormInput label="Price per night (LKR)" type="number" min="0" value={form.basePrice} onChange={(e) => setField("basePrice", e.target.value)} />
-                <FormSelect label="Booking method" value={form.bookingMethod} onChange={(e) => setField("bookingMethod", e.target.value)}>
-                  {BOOKING_METHODS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                </FormSelect>
+            isEditing ? (
+              <div className="space-y-5">
+                <div className="grid grid-cols-2 gap-4">
+                  <FormInput label="Price per night (LKR)" type="number" min="0" value={form.basePrice} onChange={(e) => setField("basePrice", e.target.value)} />
+                  <FormSelect label="Booking method" value={form.bookingMethod} onChange={(e) => setField("bookingMethod", e.target.value)}>
+                    {BOOKING_METHODS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                  </FormSelect>
+                </div>
+                <div className="flex justify-end gap-3 pt-2">
+                  <Button variant="secondary" onClick={handleCancelEdit}>Cancel</Button>
+                  <SaveButton onClick={handleSavePricing} />
+                </div>
               </div>
-              <div className="flex justify-end pt-2"><SaveButton onClick={handleSavePricing} /></div>
-            </div>
+            ) : (
+              <div className="space-y-5">
+                <SectionHeader title="Pricing & Booking" onEdit={() => setIsEditing(true)} />
+                <div className="grid grid-cols-2 gap-4">
+                  <InfoField label="Price per night" value={form.basePrice !== "" ? formatBasePrice(form.basePrice) : ""} />
+                  <InfoField label="Booking method" value={labelFor(BOOKING_METHODS, form.bookingMethod)} />
+                </div>
+              </div>
+            )
           )}
 
           {activeTab === "amenities" && (
-            <div className="space-y-5">
-              <div className="flex flex-wrap gap-2 mb-3">
-                {PREDEFINED_AMENITIES.map((amenity) => (
-                  <ToggleChip key={amenity} label={amenity} selected={form.amenities.includes(amenity)} onToggle={() => toggleAmenity(amenity)} />
+            isEditing ? (
+              <div className="space-y-5">
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {PREDEFINED_AMENITIES.map((amenity) => (
+                    <ToggleChip key={amenity} label={amenity} selected={form.amenities.includes(amenity)} onToggle={() => toggleAmenity(amenity)} />
+                  ))}
+                </div>
+                {form.amenities.filter((a) => !PREDEFINED_AMENITIES.includes(a)).map((amenity) => (
+                  <ToggleChip key={amenity} label={amenity} removable onToggle={() => toggleAmenity(amenity)} className="mr-2 mb-2" />
                 ))}
+                <div className="flex gap-2">
+                  <input
+                    type="text" value={customAmenity} onChange={(e) => setCustomAmenity(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCustomAmenity(); } }}
+                    placeholder="Add custom amenity..."
+                    className="flex-1 px-3 py-2 border border-brand-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                  />
+                  <Button variant="secondary" size="sm" onClick={addCustomAmenity}>Add</Button>
+                </div>
+                <div className="flex justify-end gap-3 pt-2">
+                  <Button variant="secondary" onClick={handleCancelEdit}>Cancel</Button>
+                  <SaveButton onClick={handleSaveAmenities} />
+                </div>
               </div>
-              {form.amenities.filter((a) => !PREDEFINED_AMENITIES.includes(a)).map((amenity) => (
-                <ToggleChip key={amenity} label={amenity} removable onToggle={() => toggleAmenity(amenity)} className="mr-2 mb-2" />
-              ))}
-              <div className="flex gap-2">
-                <input
-                  type="text" value={customAmenity} onChange={(e) => setCustomAmenity(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCustomAmenity(); } }}
-                  placeholder="Add custom amenity..."
-                  className="flex-1 px-3 py-2 border border-brand-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
-                />
-                <Button variant="secondary" size="sm" onClick={addCustomAmenity}>Add</Button>
+            ) : (
+              <div className="space-y-4">
+                <SectionHeader title="Amenities" onEdit={() => setIsEditing(true)} />
+                {form.amenities.length > 0 ? (
+                  <div className="flex flex-wrap gap-2">
+                    {form.amenities.map((amenity) => (
+                      <Badge key={amenity} variant="neutral">{amenity}</Badge>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-slate-400 italic">No amenities added yet.</p>
+                )}
               </div>
-              <div className="flex justify-end pt-2"><SaveButton onClick={handleSaveAmenities} /></div>
-            </div>
+            )
           )}
 
           {activeTab === "gallery" && (
