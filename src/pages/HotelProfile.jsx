@@ -1,10 +1,13 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import axiosInstance from "../api/axiosInstance";
+import { useHotel } from "../context/HotelContext";
 import {
   Building2, Image, MapPin, Users, DollarSign, Coffee,
-  Upload, X, Save, Loader2, Check, AlertCircle, Camera,
+  Upload, X, Save, Loader2, Check, AlertCircle, Camera, Plus,
+  Pencil, XCircle, Clock, Phone, Star, Home,
 } from "lucide-react";
-import { PageHeader, FormInput, FormSelect, Alert, LoadingSpinner, Button, ToggleChip, Badge } from "../components/ui";
+import { FormInput, Alert, LoadingSpinner, Button, ToggleChip, Badge, CustomSelect } from "../components/ui";
 import {
   HOTEL_TYPES, PLACE_TYPES, BATHROOM_TYPES, BOOKING_METHODS, WHO_ELSE_OPTIONS,
   COUNTRIES, PREDEFINED_AMENITIES,
@@ -13,16 +16,18 @@ import {
 const TABS = [
   { key: "overview", label: "Overview", icon: Building2 },
   { key: "location", label: "Location", icon: MapPin },
-  { key: "guests", label: "Guest Experience", icon: Users },
-  { key: "pricing", label: "Pricing & Booking", icon: DollarSign },
+  { key: "guests", label: "Guests", icon: Users },
+  { key: "pricing", label: "Pricing", icon: DollarSign },
   { key: "amenities", label: "Amenities", icon: Coffee },
-  { key: "gallery", label: "Gallery", icon: Image },
 ];
 
+const STAR_OPTIONS = [
+  { value: "", label: "Not rated" },
+  ...[1, 2, 3, 4, 5].map((n) => ({ value: String(n), label: `${n} star${n > 1 ? "s" : ""}` })),
+];
+const COUNTRY_OPTIONS = COUNTRIES.map((c) => ({ value: c.iso, label: c.name }));
 const MIN_GALLERY_IMAGES = 5;
 
-// Matches tripora-frontend's formatBasePrice — the backend stores basePrice as a
-// pre-formatted string (e.g. "13,500 LKR"), not a number.
 const formatBasePrice = (amount) => `${Number(amount).toLocaleString("en-LK")} LKR`;
 const parseBasePrice = (basePrice) => {
   const parsed = parseFloat(String(basePrice || "").replace(/[^0-9.]/g, ""));
@@ -37,18 +42,23 @@ const emptyFormState = {
   amenities: [],
 };
 
+const formatTime = (time) => {
+  if (!time) return "";
+  const [h, m] = time.split(":");
+  const hour = parseInt(h);
+  return `${hour % 12 || 12}:${m} ${hour >= 12 ? "PM" : "AM"}`;
+};
+
 const HotelProfile = () => {
+  const navigate = useNavigate();
   const user = JSON.parse(localStorage.getItem("ceylonstay_user") || "null");
+  const { selectedHotel, refreshHotels, loading: hotelLoading } = useHotel();
   const [hotel, setHotel] = useState(null);
   const [activeTab, setActiveTab] = useState("overview");
+  const [editing, setEditing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [loadError, setLoadError] = useState("");
-
-  // Register-hotel form (shown when the partner has no hotel yet)
-  const [creating, setCreating] = useState(false);
-  const [createError, setCreateError] = useState("");
-  const [createForm, setCreateForm] = useState(emptyFormState);
   const [customAmenity, setCustomAmenity] = useState("");
 
   const [saveStatus, setSaveStatus] = useState(null);
@@ -64,59 +74,48 @@ const HotelProfile = () => {
   const [newGalleryFiles, setNewGalleryFiles] = useState([]);
   const [newGalleryPreviews, setNewGalleryPreviews] = useState([]);
   const [imageError, setImageError] = useState("");
+  const [uploadingImages, setUploadingImages] = useState(false);
 
   useEffect(() => {
-    fetchHotel();
-  }, []);
+    if (hotelLoading) return;
+    if (selectedHotel) {
+      setHotel(selectedHotel);
+      populateState(selectedHotel);
+    } else {
+      setHotel(null);
+    }
+    setLoading(false);
+  }, [selectedHotel, hotelLoading]);
 
   const showSaveFeedback = (status, message, duration = 2500) => {
     setSaveStatus(status);
     setSaveMessage(message);
-    setTimeout(() => {
-      setSaveStatus(null);
-      setSaveMessage("");
-    }, duration);
-  };
-
-  const fetchHotel = async () => {
-    try {
-      const res = await axiosInstance.get("/hotels/my-hotels");
-      if (res.data.hotels?.length > 0) {
-        const h = res.data.hotels[0];
-        setHotel(h);
-        populateState(h);
-      }
-    } catch {
-      setLoadError("Failed to load hotel data");
-    } finally {
-      setLoading(false);
-    }
+    setTimeout(() => { setSaveStatus(null); setSaveMessage(""); }, duration);
   };
 
   const populateState = (h) => {
     setForm({
-      name: h.name || "",
-      description: h.description || "",
-      hotelType: h.hotelType || "",
-      placeType: h.placeType || "",
-      starRating: h.starRating || "",
-      country: h.country || "LK",
-      streetAddress: h.streetAddress || "",
-      apartmentNumber: h.apartmentNumber || "",
-      city: h.city || "",
-      province: h.province || "",
-      postalCode: h.postalCode || "",
-      contactNumber: h.contactNumber || "",
-      bathroomType: h.bathroomType || "",
+      name: h.name || "", description: h.description || "",
+      hotelType: h.hotelType || "", placeType: h.placeType || "",
+      starRating: h.starRating ? String(h.starRating) : "",
+      country: h.country || "LK", streetAddress: h.streetAddress || "",
+      apartmentNumber: h.apartmentNumber || "", city: h.city || "",
+      province: h.province || "", postalCode: h.postalCode || "",
+      contactNumber: h.contactNumber || "", bathroomType: h.bathroomType || "",
       whoElseIsThere: h.whoElseIsThere || [],
-      checkInTime: h.checkInTime || "14:00",
-      checkOutTime: h.checkOutTime || "12:00",
+      checkInTime: h.checkInTime || "14:00", checkOutTime: h.checkOutTime || "12:00",
       basePrice: parseBasePrice(h.basePrice),
       bookingMethod: h.bookingMethod || "INSTANT_BOOK",
       amenities: h.amenities || [],
     });
     setExistingProfileImage(h.profileImage || "");
     setExistingGalleryImages(h.images || []);
+  };
+
+  const cancelEdit = () => {
+    if (hotel) populateState(hotel);
+    setEditing(false);
+    setSaveStatus(null);
   };
 
   const saveSection = async (data) => {
@@ -127,7 +126,9 @@ const HotelProfile = () => {
       const res = await axiosInstance.put(`/hotels/${hotel.hotel_id}`, data);
       setHotel(res.data.hotel);
       populateState(res.data.hotel);
-      showSaveFeedback("success", "Saved successfully!");
+      refreshHotels();
+      setEditing(false);
+      showSaveFeedback("success", "Saved!");
     } catch (err) {
       showSaveFeedback("error", err.response?.data?.message || err.response?.data?.error || "Failed to save");
     } finally {
@@ -135,26 +136,19 @@ const HotelProfile = () => {
     }
   };
 
-  const handleSaveOverview = () => saveSection({
-    name: form.name, description: form.description, hotelType: form.hotelType,
-    placeType: form.placeType, starRating: form.starRating || undefined,
-  });
-
-  const handleSaveLocation = () => saveSection({
-    country: form.country, streetAddress: form.streetAddress, apartmentNumber: form.apartmentNumber,
-    city: form.city, province: form.province, postalCode: form.postalCode, contactNumber: form.contactNumber,
-  });
-
-  const handleSaveGuests = () => saveSection({
-    bathroomType: form.bathroomType, whoElseIsThere: form.whoElseIsThere,
-    checkInTime: form.checkInTime, checkOutTime: form.checkOutTime,
-  });
-
-  const handleSavePricing = () => saveSection({
-    basePrice: formatBasePrice(form.basePrice), bookingMethod: form.bookingMethod,
-  });
-
-  const handleSaveAmenities = () => saveSection({ amenities: form.amenities });
+  const handleSave = () => {
+    if (activeTab === "overview") {
+      saveSection({ name: form.name, description: form.description, hotelType: form.hotelType, placeType: form.placeType, starRating: form.starRating || undefined });
+    } else if (activeTab === "location") {
+      saveSection({ country: form.country, streetAddress: form.streetAddress, apartmentNumber: form.apartmentNumber, city: form.city, province: form.province, postalCode: form.postalCode, contactNumber: form.contactNumber });
+    } else if (activeTab === "guests") {
+      saveSection({ bathroomType: form.bathroomType, whoElseIsThere: form.whoElseIsThere, checkInTime: form.checkInTime, checkOutTime: form.checkOutTime });
+    } else if (activeTab === "pricing") {
+      saveSection({ basePrice: formatBasePrice(form.basePrice), bookingMethod: form.bookingMethod });
+    } else if (activeTab === "amenities") {
+      saveSection({ amenities: form.amenities });
+    }
+  };
 
   const toggleAmenity = (amenity) => {
     setField("amenities", form.amenities.includes(amenity)
@@ -199,11 +193,11 @@ const HotelProfile = () => {
 
   const handleSaveGallery = async () => {
     if (newGalleryFiles.length < MIN_GALLERY_IMAGES) {
-      setImageError(`Select at least ${MIN_GALLERY_IMAGES} gallery images to upload (this replaces the current gallery).`);
+      setImageError(`Select at least ${MIN_GALLERY_IMAGES} gallery images to upload (replaces current gallery).`);
       setTimeout(() => setImageError(""), 4000);
       return;
     }
-    setSaving(true);
+    setUploadingImages(true);
     setSaveStatus(null);
     try {
       const formData = new FormData();
@@ -222,412 +216,405 @@ const HotelProfile = () => {
     } catch (err) {
       showSaveFeedback("error", err.response?.data?.message || "Failed to upload photos");
     } finally {
-      setSaving(false);
+      setUploadingImages(false);
     }
   };
 
-  // ── Register-hotel form (no hotel yet) ──────────────────────────────
+  // --- Helpers for read-only display ---
+  const labelFor = (list, val) => list.find((o) => o.value === val)?.label || val || "—";
+  const countryName = (iso) => COUNTRIES.find((c) => c.iso === iso)?.name || iso || "—";
 
-  const setCreateField = (field, value) => setCreateForm((f) => ({ ...f, [field]: value }));
-
-  const toggleCreateWhoElse = (value) => {
-    setCreateField("whoElseIsThere", createForm.whoElseIsThere.includes(value)
-      ? createForm.whoElseIsThere.filter((v) => v !== value)
-      : [...createForm.whoElseIsThere, value]);
-  };
-
-  const toggleCreateAmenity = (amenity) => {
-    setCreateField("amenities", createForm.amenities.includes(amenity)
-      ? createForm.amenities.filter((a) => a !== amenity)
-      : [...createForm.amenities, amenity]);
-  };
-
-  const addCreateCustomAmenity = () => {
-    const trimmed = customAmenity.trim();
-    if (trimmed && !createForm.amenities.includes(trimmed)) {
-      setCreateField("amenities", [...createForm.amenities, trimmed]);
-      setCustomAmenity("");
-    }
-  };
-
-  const handleCreateHotel = async (e) => {
-    e.preventDefault();
-    setCreateError("");
-    if (!createForm.name.trim()) return setCreateError("Property name is required.");
-    if (!createForm.hotelType) return setCreateError("Select a property type.");
-    if (!createForm.placeType) return setCreateError("Select what guests will have.");
-    if (!createForm.streetAddress.trim()) return setCreateError("Street address is required.");
-    if (!createForm.city.trim()) return setCreateError("City is required.");
-    if (!createForm.bathroomType) return setCreateError("Select a bathroom type.");
-    if (createForm.whoElseIsThere.length === 0) return setCreateError("Select at least one option for who else might be there.");
-    if (!createForm.basePrice) return setCreateError("Enter a nightly price.");
-
-    setCreating(true);
-    try {
-      const payload = {
-        name: createForm.name, hotelType: createForm.hotelType, placeType: createForm.placeType,
-        starRating: createForm.starRating || undefined,
-        country: createForm.country, streetAddress: createForm.streetAddress,
-        apartmentNumber: createForm.apartmentNumber, city: createForm.city,
-        province: createForm.province, postalCode: createForm.postalCode, contactNumber: createForm.contactNumber,
-        bathroomType: createForm.bathroomType, whoElseIsThere: createForm.whoElseIsThere,
-        checkInTime: createForm.checkInTime, checkOutTime: createForm.checkOutTime,
-        basePrice: formatBasePrice(createForm.basePrice), bookingMethod: createForm.bookingMethod,
-        amenities: createForm.amenities, description: createForm.description,
-      };
-      const res = await axiosInstance.post("/hotels/register", payload);
-      setHotel(res.data.hotel);
-      populateState(res.data.hotel);
-    } catch (err) {
-      setCreateError(err.response?.data?.message || "Failed to create hotel. Please try again.");
-    } finally {
-      setCreating(false);
-    }
-  };
-
-  if (loading) {
-    return <LoadingSpinner className="py-20" />;
-  }
+  if (loading || hotelLoading) return <LoadingSpinner className="py-20" />;
 
   if (loadError) {
     return (
-      <div className="flex flex-col items-center py-20 gap-3">
+      <div className="flex flex-col items-center py-20 gap-3 animate-fadeIn">
         <AlertCircle className="h-12 w-12 text-red-400" />
         <p className="text-red-600 font-medium">{loadError}</p>
       </div>
     );
   }
 
-  const SaveButton = ({ onClick }) => {
-    const getButtonContent = () => {
-      if (saving) return <><Loader2 className="h-4 w-4 animate-spin" />Saving...</>;
-      if (saveStatus === "success") return <><Check className="h-4 w-4" />{saveMessage}</>;
-      if (saveStatus === "error") return <><AlertCircle className="h-4 w-4" />{saveMessage}</>;
-      return <><Save className="h-4 w-4" />Save Changes</>;
-    };
-    const getButtonStyle = () => {
-      if (saveStatus === "success") return "bg-green-600 hover:bg-green-700";
-      if (saveStatus === "error") return "bg-red-600 hover:bg-red-700";
-      return "bg-primary hover:bg-primary-dark";
-    };
-    return (
-      <button
-        onClick={onClick}
-        disabled={saving}
-        className={`inline-flex items-center gap-2 px-5 py-2.5 text-white rounded-xl text-sm font-semibold transition-all disabled:opacity-50 ${getButtonStyle()}`}
-      >
-        {getButtonContent()}
-      </button>
-    );
-  };
-
   if (!hotel) {
     return (
-      <div className="max-w-2xl mx-auto py-12 px-4">
-        <div className="bg-white rounded-2xl border border-brand-border shadow-sm p-8">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 bg-tint rounded-xl flex items-center justify-center">
-              <Building2 className="h-5 w-5 text-primary" />
-            </div>
-            <h2 className="text-2xl font-bold text-slate-900 font-display">Register your hotel</h2>
-          </div>
-          <p className="text-muted text-sm mb-6">Add your property details to start receiving bookings.</p>
-
-          {createError && <Alert variant="error" className="mb-4">{createError}</Alert>}
-
-          <form onSubmit={handleCreateHotel} className="space-y-5">
-            <h3 className="text-sm font-semibold text-slate-700">Basics</h3>
-            <FormInput label="Property name" placeholder="e.g. Ocean View Resort" value={createForm.name} onChange={(e) => setCreateField("name", e.target.value)} required />
-            <div className="grid grid-cols-2 gap-4">
-              <FormSelect label="Property type" value={createForm.hotelType} onChange={(e) => setCreateField("hotelType", e.target.value)}>
-                <option value="">Select</option>
-                {HOTEL_TYPES.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-              </FormSelect>
-              <FormSelect label="Guests will have" value={createForm.placeType} onChange={(e) => setCreateField("placeType", e.target.value)}>
-                <option value="">Select</option>
-                {PLACE_TYPES.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-              </FormSelect>
-            </div>
-            <FormSelect label="Star rating (optional)" value={createForm.starRating} onChange={(e) => setCreateField("starRating", e.target.value)}>
-              <option value="">Not rated</option>
-              {[1, 2, 3, 4, 5].map((n) => <option key={n} value={n}>{n} star{n > 1 ? "s" : ""}</option>)}
-            </FormSelect>
-
-            <h3 className="text-sm font-semibold text-slate-700 pt-2">Location</h3>
-            <FormSelect label="Country" value={createForm.country} onChange={(e) => setCreateField("country", e.target.value)}>
-              {COUNTRIES.map((c) => <option key={c.iso} value={c.iso}>{c.name}</option>)}
-            </FormSelect>
-            <FormInput label="Street address" placeholder="123 Beach Road" value={createForm.streetAddress} onChange={(e) => setCreateField("streetAddress", e.target.value)} required />
-            <div className="grid grid-cols-2 gap-4">
-              <FormInput label="Apartment / unit (optional)" value={createForm.apartmentNumber} onChange={(e) => setCreateField("apartmentNumber", e.target.value)} />
-              <FormInput label="City" placeholder="Galle" value={createForm.city} onChange={(e) => setCreateField("city", e.target.value)} required />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <FormInput label="Province (optional)" value={createForm.province} onChange={(e) => setCreateField("province", e.target.value)} />
-              <FormInput label="Postal code (optional)" value={createForm.postalCode} onChange={(e) => setCreateField("postalCode", e.target.value)} />
-            </div>
-            <FormInput label="Contact number (optional)" placeholder="+94912234567" value={createForm.contactNumber} onChange={(e) => setCreateField("contactNumber", e.target.value)} />
-
-            <h3 className="text-sm font-semibold text-slate-700 pt-2">Guest experience</h3>
-            <FormSelect label="Bathroom" value={createForm.bathroomType} onChange={(e) => setCreateField("bathroomType", e.target.value)}>
-              <option value="">Select</option>
-              {BATHROOM_TYPES.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-            </FormSelect>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">Who else might be there</label>
-              <div className="flex flex-wrap gap-2">
-                {WHO_ELSE_OPTIONS.map((o) => (
-                  <ToggleChip key={o.value} label={o.label} selected={createForm.whoElseIsThere.includes(o.value)} onToggle={() => toggleCreateWhoElse(o.value)} />
-                ))}
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <FormInput label="Check-in time" type="time" value={createForm.checkInTime} onChange={(e) => setCreateField("checkInTime", e.target.value)} />
-              <FormInput label="Check-out time" type="time" value={createForm.checkOutTime} onChange={(e) => setCreateField("checkOutTime", e.target.value)} />
-            </div>
-
-            <h3 className="text-sm font-semibold text-slate-700 pt-2">Pricing & booking</h3>
-            <div className="grid grid-cols-2 gap-4">
-              <FormInput label="Price per night (LKR)" type="number" min="0" placeholder="13500" value={createForm.basePrice} onChange={(e) => setCreateField("basePrice", e.target.value)} required />
-              <FormSelect label="Booking method" value={createForm.bookingMethod} onChange={(e) => setCreateField("bookingMethod", e.target.value)}>
-                {BOOKING_METHODS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-              </FormSelect>
-            </div>
-
-            <h3 className="text-sm font-semibold text-slate-700 pt-2">Amenities (optional)</h3>
-            <div className="flex flex-wrap gap-2 mb-2">
-              {PREDEFINED_AMENITIES.map((amenity) => (
-                <ToggleChip key={amenity} label={amenity} selected={createForm.amenities.includes(amenity)} onToggle={() => toggleCreateAmenity(amenity)} />
-              ))}
-            </div>
-            <div className="flex gap-2">
-              <input
-                type="text" value={customAmenity} onChange={(e) => setCustomAmenity(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCreateCustomAmenity(); } }}
-                placeholder="Add custom amenity..."
-                className="flex-1 px-3 py-2 border border-brand-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
-              />
-              <Button variant="secondary" size="sm" type="button" onClick={addCreateCustomAmenity}>Add</Button>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Description (optional)</label>
-              <textarea
-                value={createForm.description} onChange={(e) => setCreateField("description", e.target.value)}
-                rows={4} placeholder="Describe your hotel, its unique features, surroundings..."
-                className="w-full px-3 py-2 border border-brand-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary resize-y"
-              />
-            </div>
-
-            <Button type="submit" loading={creating} className="w-full" size="lg">
-              {creating ? "Creating..." : "Create Hotel"}
-            </Button>
-          </form>
+      <div className="flex flex-col items-center justify-center py-20 gap-5 animate-fadeIn">
+        <div className="w-16 h-16 bg-tint rounded-2xl flex items-center justify-center">
+          <Building2 className="h-8 w-8 text-primary" />
         </div>
+        <div className="text-center">
+          <h2 className="text-xl font-bold text-slate-900 font-display mb-1">No property registered</h2>
+          <p className="text-sm text-muted max-w-sm">Register your first property to start receiving bookings on Tripora.</p>
+        </div>
+        <Button onClick={() => navigate("/register-hotel")} size="lg">
+          <Plus className="h-4 w-4" />
+          Register Property
+        </Button>
       </div>
     );
   }
 
-  return (
-    <div className="space-y-6">
-      <PageHeader title="Hotel Profile" subtitle="Manage your hotel information and settings">
-        {user?.user_id && <Badge variant="neutral">Partner ID: {user.user_id}</Badge>}
-      </PageHeader>
+  // --- Read-only info row helper ---
+  const InfoRow = ({ icon: Icon, label, value }) => (
+    <div className="flex items-start gap-3 py-2.5">
+      <div className="w-8 h-8 rounded-lg bg-surface flex items-center justify-center flex-shrink-0 mt-0.5">
+        <Icon className="h-4 w-4 text-muted" />
+      </div>
+      <div className="min-w-0">
+        <p className="text-xs text-muted font-medium">{label}</p>
+        <p className="text-sm text-slate-900 font-medium truncate">{value || "—"}</p>
+      </div>
+    </div>
+  );
 
-      <div className="bg-white rounded-2xl shadow-sm border border-brand-border">
-        <div className="border-b border-brand-border overflow-x-auto">
-          <div className="flex min-w-max">
+  return (
+    <div className="space-y-6 animate-fadeIn">
+
+      {/* ── Hero: Gallery + Profile Image ── */}
+      <div className="bg-white rounded-2xl border border-brand-border shadow-sm overflow-hidden">
+        {/* Gallery banner */}
+        <div className="relative">
+          {existingGalleryImages.length > 0 ? (
+            <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 gap-0.5 max-h-44 overflow-hidden">
+              {existingGalleryImages.slice(0, 8).map((url, idx) => (
+                <div key={idx} className="aspect-square relative">
+                  <img src={url} alt={`Gallery ${idx + 1}`} className="w-full h-full object-cover" />
+                  {idx === 7 && existingGalleryImages.length > 8 && (
+                    <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                      <span className="text-white text-sm font-bold">+{existingGalleryImages.length - 8}</span>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="h-32 bg-gradient-to-br from-tint to-surface flex items-center justify-center">
+              <div className="text-center">
+                <Image className="h-8 w-8 text-primary/40 mx-auto mb-1" />
+                <p className="text-xs text-muted">No gallery photos yet</p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Profile row */}
+        <div className="px-5 sm:px-6 py-4 flex flex-col sm:flex-row sm:items-center gap-4">
+          <div className="-mt-12 sm:-mt-10 relative z-10 flex-shrink-0">
+            {existingProfileImage ? (
+              <img src={existingProfileImage} alt="Profile" className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl object-cover border-4 border-white shadow-md" />
+            ) : (
+              <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-tint border-4 border-white shadow-md flex items-center justify-center">
+                <Building2 className="h-8 w-8 text-primary/50" />
+              </div>
+            )}
+          </div>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 font-display tracking-tight truncate">{hotel.name}</h1>
+            <div className="flex flex-wrap items-center gap-2 mt-1">
+              {hotel.city && <span className="text-sm text-muted flex items-center gap-1"><MapPin className="h-3 w-3" />{hotel.city}{hotel.country ? `, ${countryName(hotel.country)}` : ""}</span>}
+              {hotel.starRating && <Badge variant="neutral" className="text-xs">{hotel.starRating} Star</Badge>}
+              {hotel.hotelType && <Badge variant="info" className="text-xs">{labelFor(HOTEL_TYPES, hotel.hotelType)}</Badge>}
+            </div>
+          </div>
+          {user?.user_id && <Badge variant="neutral" className="hidden sm:flex text-xs self-start">ID: {user.user_id}</Badge>}
+        </div>
+      </div>
+
+      {/* ── Photo Management Card ── */}
+      <div className="bg-white rounded-2xl border border-brand-border shadow-sm p-5 sm:p-6">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-tint flex items-center justify-center">
+              <Camera className="h-4 w-4 text-primary" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-slate-900">Photos</h3>
+              <p className="text-xs text-muted">Profile image & gallery ({existingGalleryImages.length} photos)</p>
+            </div>
+          </div>
+          {(newGalleryFiles.length >= MIN_GALLERY_IMAGES || newProfileFile) && (
+            <button
+              onClick={handleSaveGallery}
+              disabled={uploadingImages}
+              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-primary hover:bg-primary-dark rounded-xl shadow-sm shadow-primary/20 transition-all duration-200 active:scale-95 disabled:opacity-50"
+            >
+              {uploadingImages ? <><Loader2 className="h-4 w-4 animate-spin" />Uploading...</> : <><Upload className="h-4 w-4" />Save Photos</>}
+            </button>
+          )}
+        </div>
+
+        {imageError && <Alert variant="error" className="mb-4">{imageError}</Alert>}
+        {saveStatus && activeTab !== "overview" && activeTab !== "location" && activeTab !== "guests" && activeTab !== "pricing" && activeTab !== "amenities" && (
+          <Alert variant={saveStatus} className="mb-4">{saveMessage}</Alert>
+        )}
+
+        <div className="grid grid-cols-1 sm:grid-cols-[auto_1fr] gap-5">
+          {/* Profile photo */}
+          <div>
+            <p className="text-xs font-medium text-muted mb-2">Profile photo</p>
+            <label className="relative flex h-28 w-28 items-center justify-center rounded-2xl border-2 border-dashed border-brand-border cursor-pointer hover:border-primary hover:bg-tint transition-all duration-200 overflow-hidden group">
+              {newProfilePreview || existingProfileImage ? (
+                <>
+                  <img src={newProfilePreview || existingProfileImage} alt="Profile" className="h-full w-full object-cover" />
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
+                    <Camera className="h-5 w-5 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </div>
+                </>
+              ) : (
+                <span className="flex flex-col items-center text-slate-400">
+                  <Camera className="h-6 w-6" />
+                  <span className="text-[10px] mt-1 font-medium">Add photo</span>
+                </span>
+              )}
+              <input type="file" accept="image/*" onChange={handleProfileFileChange} className="hidden" />
+            </label>
+          </div>
+
+          {/* Gallery upload */}
+          <div>
+            <p className="text-xs font-medium text-muted mb-2">
+              Gallery {newGalleryFiles.length > 0 && <span className="text-primary">({newGalleryFiles.length}/{MIN_GALLERY_IMAGES} min)</span>}
+            </p>
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2">
+              {newGalleryPreviews.map((src, idx) => (
+                <div key={idx} className="relative group aspect-square rounded-xl overflow-hidden border border-brand-border">
+                  <img src={src} alt={`New ${idx + 1}`} className="w-full h-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => removeGalleryFile(idx)}
+                    className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-all duration-200 hover:bg-red-600"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              ))}
+              <label className="aspect-square flex flex-col items-center justify-center border-2 border-dashed border-brand-border rounded-xl cursor-pointer hover:border-primary hover:bg-tint transition-all duration-200">
+                <Upload className="h-5 w-5 text-slate-400 mb-0.5" />
+                <span className="text-[10px] text-slate-500 font-medium">Upload</span>
+                <input type="file" accept="image/*" multiple onChange={handleGalleryFilesChange} className="hidden" />
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Details Card with Tabs ── */}
+      <div className="bg-white rounded-2xl border border-brand-border shadow-sm overflow-hidden">
+        {/* Tab bar + Edit/Save */}
+        <div className="border-b border-brand-border flex items-center justify-between">
+          <div className="flex overflow-x-auto">
             {TABS.map((tab) => {
               const Icon = tab.icon;
               return (
                 <button
                   key={tab.key}
-                  onClick={() => { setActiveTab(tab.key); setSaveStatus(null); }}
-                  className={`flex items-center gap-2 px-5 py-3.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+                  onClick={() => { setActiveTab(tab.key); setEditing(false); setSaveStatus(null); }}
+                  className={`flex items-center gap-1.5 px-4 sm:px-5 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
                     activeTab === tab.key
                       ? "border-primary text-primary"
-                      : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"
+                      : "border-transparent text-slate-400 hover:text-slate-600 hover:border-slate-200"
                   }`}
                 >
                   <Icon className="h-4 w-4" />
-                  {tab.label}
+                  <span className="hidden sm:inline">{tab.label}</span>
                 </button>
               );
             })}
           </div>
+          <div className="px-4 flex items-center gap-2 flex-shrink-0">
+            {saveStatus && (
+              <span className={`text-xs font-medium flex items-center gap-1 ${saveStatus === "success" ? "text-green-600" : "text-red-600"}`}>
+                {saveStatus === "success" ? <Check className="h-3 w-3" /> : <AlertCircle className="h-3 w-3" />}
+                {saveMessage}
+              </span>
+            )}
+            {editing ? (
+              <>
+                <button
+                  onClick={cancelEdit}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-600 border border-brand-border rounded-lg hover:bg-surface transition-colors"
+                >
+                  <XCircle className="h-3.5 w-3.5" />
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSave}
+                  disabled={saving}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-primary hover:bg-primary-dark rounded-lg shadow-sm shadow-primary/20 transition-all active:scale-95 disabled:opacity-50"
+                >
+                  {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+                  {saving ? "Saving" : "Save"}
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={() => setEditing(true)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-600 border border-brand-border rounded-lg hover:bg-surface hover:text-slate-900 transition-colors"
+              >
+                <Pencil className="h-3.5 w-3.5" />
+                Edit
+              </button>
+            )}
+          </div>
         </div>
 
-        <div className="p-6">
+        <div className="p-5 sm:p-6">
+
+          {/* Overview */}
           {activeTab === "overview" && (
-            <div className="space-y-5">
-              <FormInput label="Property name" value={form.name} onChange={(e) => setField("name", e.target.value)} />
-              <div className="grid grid-cols-2 gap-4">
-                <FormSelect label="Property type" value={form.hotelType} onChange={(e) => setField("hotelType", e.target.value)}>
-                  {HOTEL_TYPES.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                </FormSelect>
-                <FormSelect label="Guests will have" value={form.placeType} onChange={(e) => setField("placeType", e.target.value)}>
-                  {PLACE_TYPES.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                </FormSelect>
-              </div>
-              <FormSelect label="Star rating (optional)" value={form.starRating} onChange={(e) => setField("starRating", e.target.value)}>
-                <option value="">Not rated</option>
-                {[1, 2, 3, 4, 5].map((n) => <option key={n} value={n}>{n} star{n > 1 ? "s" : ""}</option>)}
-              </FormSelect>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Description</label>
-                <textarea
-                  value={form.description}
-                  onChange={(e) => setField("description", e.target.value)}
-                  rows={8}
-                  placeholder="Describe your hotel, its unique features, surroundings, and what makes it special..."
-                  className="w-full px-3 py-2 border border-brand-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary resize-y"
-                />
-              </div>
-              <div className="flex justify-end pt-2"><SaveButton onClick={handleSaveOverview} /></div>
-            </div>
-          )}
-
-          {activeTab === "location" && (
-            <div className="space-y-5">
-              <FormInput label="Apartment / unit (optional)" value={form.apartmentNumber} onChange={(e) => setField("apartmentNumber", e.target.value)} />
-              <FormInput label="Street address" value={form.streetAddress} onChange={(e) => setField("streetAddress", e.target.value)} />
-              <div className="grid grid-cols-2 gap-4">
-                <FormInput label="City" value={form.city} onChange={(e) => setField("city", e.target.value)} />
-                <FormInput label="Postal code (optional)" value={form.postalCode} onChange={(e) => setField("postalCode", e.target.value)} />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <FormInput label="Province (optional)" value={form.province} onChange={(e) => setField("province", e.target.value)} />
-                <FormSelect label="Country" value={form.country} onChange={(e) => setField("country", e.target.value)}>
-                  {COUNTRIES.map((c) => <option key={c.iso} value={c.iso}>{c.name}</option>)}
-                </FormSelect>
-              </div>
-              <FormInput label="Contact number (optional)" value={form.contactNumber} onChange={(e) => setField("contactNumber", e.target.value)} />
-              <div className="flex justify-end pt-2"><SaveButton onClick={handleSaveLocation} /></div>
-            </div>
-          )}
-
-          {activeTab === "guests" && (
-            <div className="space-y-5">
-              <FormSelect label="Bathroom" value={form.bathroomType} onChange={(e) => setField("bathroomType", e.target.value)}>
-                {BATHROOM_TYPES.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-              </FormSelect>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Who else might be there</label>
-                <div className="flex flex-wrap gap-2">
-                  {WHO_ELSE_OPTIONS.map((o) => (
-                    <ToggleChip key={o.value} label={o.label} selected={form.whoElseIsThere.includes(o.value)} onToggle={() => toggleWhoElse(o.value)} />
-                  ))}
+            editing ? (
+              <div className="space-y-4 max-w-2xl animate-fadeIn">
+                <FormInput label="Property name" value={form.name} onChange={(e) => setField("name", e.target.value)} />
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <CustomSelect label="Property type" value={form.hotelType} onChange={(v) => setField("hotelType", v)} options={HOTEL_TYPES} placeholder="Select" />
+                  <CustomSelect label="Guests will have" value={form.placeType} onChange={(v) => setField("placeType", v)} options={PLACE_TYPES} placeholder="Select" />
+                  <CustomSelect label="Star rating" value={form.starRating} onChange={(v) => setField("starRating", v)} options={STAR_OPTIONS} placeholder="Not rated" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Description</label>
+                  <textarea
+                    value={form.description} onChange={(e) => setField("description", e.target.value)}
+                    rows={5} placeholder="Describe your property..."
+                    className="w-full px-3.5 py-2.5 text-sm border border-brand-border rounded-xl transition-colors placeholder:text-slate-400 hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary resize-none"
+                  />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <FormInput label="Check-in time" type="time" value={form.checkInTime} onChange={(e) => setField("checkInTime", e.target.value)} />
-                <FormInput label="Check-out time" type="time" value={form.checkOutTime} onChange={(e) => setField("checkOutTime", e.target.value)} />
-              </div>
-              <div className="flex justify-end pt-2"><SaveButton onClick={handleSaveGuests} /></div>
-            </div>
-          )}
-
-          {activeTab === "pricing" && (
-            <div className="space-y-5">
-              <div className="grid grid-cols-2 gap-4">
-                <FormInput label="Price per night (LKR)" type="number" min="0" value={form.basePrice} onChange={(e) => setField("basePrice", e.target.value)} />
-                <FormSelect label="Booking method" value={form.bookingMethod} onChange={(e) => setField("bookingMethod", e.target.value)}>
-                  {BOOKING_METHODS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                </FormSelect>
-              </div>
-              <div className="flex justify-end pt-2"><SaveButton onClick={handleSavePricing} /></div>
-            </div>
-          )}
-
-          {activeTab === "amenities" && (
-            <div className="space-y-5">
-              <div className="flex flex-wrap gap-2 mb-3">
-                {PREDEFINED_AMENITIES.map((amenity) => (
-                  <ToggleChip key={amenity} label={amenity} selected={form.amenities.includes(amenity)} onToggle={() => toggleAmenity(amenity)} />
-                ))}
-              </div>
-              {form.amenities.filter((a) => !PREDEFINED_AMENITIES.includes(a)).map((amenity) => (
-                <ToggleChip key={amenity} label={amenity} removable onToggle={() => toggleAmenity(amenity)} className="mr-2 mb-2" />
-              ))}
-              <div className="flex gap-2">
-                <input
-                  type="text" value={customAmenity} onChange={(e) => setCustomAmenity(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCustomAmenity(); } }}
-                  placeholder="Add custom amenity..."
-                  className="flex-1 px-3 py-2 border border-brand-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
-                />
-                <Button variant="secondary" size="sm" onClick={addCustomAmenity}>Add</Button>
-              </div>
-              <div className="flex justify-end pt-2"><SaveButton onClick={handleSaveAmenities} /></div>
-            </div>
-          )}
-
-          {activeTab === "gallery" && (
-            <div className="space-y-6">
-              <div>
-                <h3 className="text-sm font-semibold text-slate-700 mb-2">Current profile photo</h3>
-                {existingProfileImage ? (
-                  <img src={existingProfileImage} alt="Profile" className="w-32 h-32 object-cover rounded-xl border border-brand-border" />
-                ) : (
-                  <p className="text-sm text-slate-400 italic">No profile photo set yet.</p>
+            ) : (
+              <div className="animate-fadeIn">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-6 gap-y-1 mb-4">
+                  <InfoRow icon={Building2} label="Property type" value={labelFor(HOTEL_TYPES, hotel.hotelType)} />
+                  <InfoRow icon={Home} label="Guests will have" value={labelFor(PLACE_TYPES, hotel.placeType)} />
+                  <InfoRow icon={Star} label="Star rating" value={hotel.starRating ? `${hotel.starRating} Star` : "Not rated"} />
+                </div>
+                {hotel.description && (
+                  <div className="pt-3 border-t border-brand-border">
+                    <p className="text-xs text-muted font-medium mb-1">Description</p>
+                    <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-line">{hotel.description}</p>
+                  </div>
                 )}
               </div>
+            )
+          )}
 
-              <div>
-                <h3 className="text-sm font-semibold text-slate-700 mb-2">Current gallery ({existingGalleryImages.length})</h3>
-                {existingGalleryImages.length > 0 ? (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                    {existingGalleryImages.map((url, idx) => (
-                      <img key={idx} src={url} alt={`Gallery ${idx + 1}`} className="aspect-square w-full object-cover rounded-lg border border-brand-border" />
+          {/* Location */}
+          {activeTab === "location" && (
+            editing ? (
+              <div className="space-y-4 max-w-2xl animate-fadeIn">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <CustomSelect label="Country" value={form.country} onChange={(v) => setField("country", v)} options={COUNTRY_OPTIONS} />
+                  <FormInput label="Street address" value={form.streetAddress} onChange={(e) => setField("streetAddress", e.target.value)} />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <FormInput label="Apt / unit" placeholder="Optional" value={form.apartmentNumber} onChange={(e) => setField("apartmentNumber", e.target.value)} />
+                  <FormInput label="City" value={form.city} onChange={(e) => setField("city", e.target.value)} />
+                  <FormInput label="Province" placeholder="Optional" value={form.province} onChange={(e) => setField("province", e.target.value)} />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <FormInput label="Postal code" placeholder="Optional" value={form.postalCode} onChange={(e) => setField("postalCode", e.target.value)} />
+                  <FormInput label="Contact number" placeholder="Optional" value={form.contactNumber} onChange={(e) => setField("contactNumber", e.target.value)} />
+                </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-1 animate-fadeIn">
+                <InfoRow icon={MapPin} label="Street address" value={hotel.streetAddress} />
+                <InfoRow icon={Building2} label="Apt / unit" value={hotel.apartmentNumber} />
+                <InfoRow icon={MapPin} label="City" value={hotel.city} />
+                <InfoRow icon={MapPin} label="Province" value={hotel.province} />
+                <InfoRow icon={MapPin} label="Postal code" value={hotel.postalCode} />
+                <InfoRow icon={MapPin} label="Country" value={countryName(hotel.country)} />
+                <InfoRow icon={Phone} label="Contact" value={hotel.contactNumber} />
+              </div>
+            )
+          )}
+
+          {/* Guests */}
+          {activeTab === "guests" && (
+            editing ? (
+              <div className="space-y-4 max-w-2xl animate-fadeIn">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
+                  <CustomSelect label="Bathroom type" value={form.bathroomType} onChange={(v) => setField("bathroomType", v)} options={BATHROOM_TYPES} placeholder="Select" />
+                  <FormInput label="Check-in" type="time" value={form.checkInTime} onChange={(e) => setField("checkInTime", e.target.value)} />
+                  <FormInput label="Check-out" type="time" value={form.checkOutTime} onChange={(e) => setField("checkOutTime", e.target.value)} />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Who else might be there</label>
+                  <div className="flex flex-wrap gap-2">
+                    {WHO_ELSE_OPTIONS.map((o) => (
+                      <ToggleChip key={o.value} label={o.label} selected={form.whoElseIsThere.includes(o.value)} onToggle={() => toggleWhoElse(o.value)} />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="animate-fadeIn">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-6 gap-y-1 mb-4">
+                  <InfoRow icon={Users} label="Bathroom" value={labelFor(BATHROOM_TYPES, hotel.bathroomType)} />
+                  <InfoRow icon={Clock} label="Check-in" value={formatTime(hotel.checkInTime)} />
+                  <InfoRow icon={Clock} label="Check-out" value={formatTime(hotel.checkOutTime)} />
+                </div>
+                {hotel.whoElseIsThere?.length > 0 && (
+                  <div className="pt-3 border-t border-brand-border">
+                    <p className="text-xs text-muted font-medium mb-2">Who else might be there</p>
+                    <div className="flex flex-wrap gap-2">
+                      {hotel.whoElseIsThere.map((v) => (
+                        <span key={v} className="px-3 py-1 rounded-full text-xs font-medium bg-tint text-primary-dark border border-primary/20">{labelFor(WHO_ELSE_OPTIONS, v)}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )
+          )}
+
+          {/* Pricing */}
+          {activeTab === "pricing" && (
+            editing ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-2xl animate-fadeIn">
+                <FormInput label="Price per night (LKR)" type="number" min="0" value={form.basePrice} onChange={(e) => setField("basePrice", e.target.value)} />
+                <CustomSelect label="Booking method" value={form.bookingMethod} onChange={(v) => setField("bookingMethod", v)} options={BOOKING_METHODS} />
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 animate-fadeIn">
+                <InfoRow icon={DollarSign} label="Price per night" value={hotel.basePrice || "—"} />
+                <InfoRow icon={DollarSign} label="Booking method" value={labelFor(BOOKING_METHODS, hotel.bookingMethod)} />
+              </div>
+            )
+          )}
+
+          {/* Amenities */}
+          {activeTab === "amenities" && (
+            editing ? (
+              <div className="space-y-4 max-w-3xl animate-fadeIn">
+                <div className="flex flex-wrap gap-1.5">
+                  {PREDEFINED_AMENITIES.map((amenity) => (
+                    <ToggleChip key={amenity} label={amenity} selected={form.amenities.includes(amenity)} onToggle={() => toggleAmenity(amenity)} />
+                  ))}
+                  {form.amenities.filter((a) => !PREDEFINED_AMENITIES.includes(a)).map((amenity) => (
+                    <ToggleChip key={amenity} label={amenity} removable onToggle={() => toggleAmenity(amenity)} />
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    type="text" value={customAmenity} onChange={(e) => setCustomAmenity(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCustomAmenity(); } }}
+                    placeholder="Add custom amenity..."
+                    className="flex-1 px-3.5 py-2 text-sm border border-brand-border rounded-xl transition-colors placeholder:text-slate-400 hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                  />
+                  <button onClick={addCustomAmenity} className="px-4 py-2 text-sm font-semibold border border-brand-border text-slate-700 bg-white hover:bg-surface rounded-xl transition-colors">Add</button>
+                </div>
+              </div>
+            ) : (
+              <div className="animate-fadeIn">
+                {hotel.amenities?.length > 0 ? (
+                  <div className="flex flex-wrap gap-2">
+                    {hotel.amenities.map((amenity) => (
+                      <span key={amenity} className="px-3 py-1.5 rounded-full text-xs font-medium bg-tint text-primary-dark border border-primary/20">{amenity}</span>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-sm text-slate-400 italic">No gallery photos yet.</p>
+                  <p className="text-sm text-muted italic">No amenities added yet.</p>
                 )}
               </div>
-
-              {imageError && <Alert variant="error">{imageError}</Alert>}
-
-              <div>
-                <h3 className="text-sm font-semibold text-slate-700 mb-2">New profile photo (optional)</h3>
-                <label className="relative flex h-24 w-24 items-center justify-center rounded-xl border-2 border-dashed border-brand-border cursor-pointer hover:border-primary hover:bg-tint transition-colors overflow-hidden">
-                  {newProfilePreview ? (
-                    <img src={newProfilePreview} alt="New profile" className="h-full w-full object-cover" />
-                  ) : (
-                    <span className="flex flex-col items-center text-slate-400">
-                      <Camera className="h-5 w-5" />
-                      <span className="text-[10px] mt-1">Add photo</span>
-                    </span>
-                  )}
-                  <input type="file" accept="image/*" onChange={handleProfileFileChange} className="hidden" />
-                </label>
-              </div>
-
-              <div>
-                <h3 className="text-sm font-semibold text-slate-700 mb-2">
-                  Upload new gallery — replaces the whole gallery ({newGalleryFiles.length}/{MIN_GALLERY_IMAGES} minimum)
-                </h3>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                  {newGalleryPreviews.map((src, idx) => (
-                    <div key={idx} className="relative group aspect-square">
-                      <img src={src} alt={`New ${idx + 1}`} className="w-full h-full object-cover rounded-lg border border-brand-border" />
-                      <button
-                        type="button" onClick={() => removeGalleryFile(idx)}
-                        className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </div>
-                  ))}
-                  <label className="aspect-square flex flex-col items-center justify-center border-2 border-dashed border-brand-border rounded-xl cursor-pointer hover:border-primary hover:bg-tint transition-colors">
-                    <Upload className="h-6 w-6 text-slate-400 mb-1" />
-                    <span className="text-xs text-slate-500">Upload</span>
-                    <input type="file" accept="image/*" multiple onChange={handleGalleryFilesChange} className="hidden" />
-                  </label>
-                </div>
-              </div>
-              <div className="flex justify-end pt-2"><SaveButton onClick={handleSaveGallery} /></div>
-            </div>
+            )
           )}
         </div>
       </div>

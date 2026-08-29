@@ -2,27 +2,32 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { TrendingUp, Calendar, CheckCircle, BedDouble, User, ChevronRight } from "lucide-react";
 import axiosInstance from "../api/axiosInstance";
+import { useHotel } from "../context/HotelContext";
 import { PageHeader, StatCard, LoadingSpinner, Alert, EmptyState } from "../components/ui";
 import { bookingTotalPrice, getRelativeTime } from "../utils/bookings";
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const user = JSON.parse(localStorage.getItem("ceylonstay_user") || "null");
+  const { selectedHotel, loading: hotelLoading } = useHotel();
   const [rooms, setRooms] = useState([]);
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [dataError, setDataError] = useState(null); // { message, variant } | null
 
   useEffect(() => {
+    if (!selectedHotel) {
+      setRooms([]);
+      setBookings([]);
+      setLoading(false);
+      return;
+    }
     const fetchDashboardData = async () => {
       try {
-        const hotelsRes = await axiosInstance.get("/hotels/my-hotels");
-        const hotel = hotelsRes.data.hotels?.[0];
-        if (!hotel) return;
-
+        setLoading(true);
         const [roomsRes, bookingsRes] = await Promise.all([
-          axiosInstance.get(`/rooms/hotel/${hotel.hotel_id}`, { params: { limit: 100 } }),
-          axiosInstance.get(`/bookings/hotel/${hotel.hotel_id}`, { params: { limit: 100 } }),
+          axiosInstance.get(`/rooms/hotel/${selectedHotel.hotel_id}`, { params: { limit: 100 } }),
+          axiosInstance.get(`/bookings/hotel/${selectedHotel.hotel_id}`, { params: { limit: 100 } }),
         ]);
         setRooms(roomsRes.data.rooms);
         setBookings(bookingsRes.data.bookings);
@@ -38,10 +43,21 @@ const Dashboard = () => {
       }
     };
     fetchDashboardData();
-  }, []);
+  }, [selectedHotel]);
 
-  if (loading) {
+  if (hotelLoading || loading) {
     return <LoadingSpinner className="py-24" />;
+  }
+
+  if (!selectedHotel) {
+    return (
+      <div className="space-y-8">
+        <PageHeader
+          title={user?.firstName ? `Welcome back, ${user.firstName}` : "Welcome back"}
+          subtitle="You don't have any properties yet. Head to Hotel Profile to register one."
+        />
+      </div>
+    );
   }
 
   const activeBookings = bookings.filter((b) => b.status === "booked").length;
@@ -57,7 +73,7 @@ const Dashboard = () => {
   // jumps to where it's managed.
   const statCards = [
     { title: "Active Bookings", value: activeBookings, icon: TrendingUp, lightColor: "bg-tint", textColor: "text-primary", onClick: () => navigate("/bookings"), highlight: true },
-    { title: "Available Rooms", value: rooms.filter((r) => !r.isTemporaryBlocked).length, icon: CheckCircle, lightColor: "bg-emerald-50", textColor: "text-emerald-600", onClick: () => navigate("/rooms") },
+    { title: "Available Rooms", value: rooms.filter((r) => !r.isOnHold).length, icon: CheckCircle, lightColor: "bg-emerald-50", textColor: "text-emerald-600", onClick: () => navigate("/rooms") },
     { title: "Total Bookings", value: bookings.length, icon: Calendar, lightColor: "bg-surface", textColor: "text-slate-500", onClick: () => navigate("/bookings") },
     { title: "Total Rooms", value: rooms.length, icon: BedDouble, lightColor: "bg-surface", textColor: "text-slate-500", onClick: () => navigate("/rooms") },
   ];
@@ -120,7 +136,9 @@ const Dashboard = () => {
                       <p className="text-sm font-medium text-slate-900 truncate">{guestName}</p>
                       <p className="text-xs text-muted truncate">
                         {booking.room?.roomName || "Room removed"}
+                        {booking.status === "pending" && <span className="text-amber-500"> · Pending Approval</span>}
                         {booking.status === "cancelled" && <span className="text-red-500"> · Cancelled</span>}
+                        {booking.status === "rejected" && <span className="text-red-500"> · Rejected</span>}
                       </p>
                     </div>
                   </div>

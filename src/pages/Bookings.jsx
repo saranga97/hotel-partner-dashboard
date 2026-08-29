@@ -2,11 +2,28 @@ import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Calendar, Search, User } from "lucide-react";
 import axiosInstance from "../api/axiosInstance";
+import { useHotel } from "../context/HotelContext";
 import BookingDetailModal from "../components/BookingDetailModal";
-import { PageHeader, StatCard, Alert, EmptyState, Badge, LoadingSpinner } from "../components/ui";
+import { PageHeader, StatCard, Alert, EmptyState, Badge, LoadingSpinner, CustomSelect } from "../components/ui";
 import { bookingTotalPrice, formatDate, getRelativeTime } from "../utils/bookings";
 
+const STATUS_FILTER_OPTIONS = [
+  { value: "all", label: "All Status" },
+  { value: "pending", label: "Pending" },
+  { value: "booked", label: "Booked" },
+  { value: "cancelled", label: "Cancelled" },
+  { value: "rejected", label: "Rejected" },
+];
+
+const STATUS_CONFIG = {
+  pending: { variant: "warning", label: "Pending Approval" },
+  booked: { variant: "success", label: "Booked" },
+  cancelled: { variant: "danger", label: "Cancelled" },
+  rejected: { variant: "danger", label: "Rejected" },
+};
+
 const Bookings = () => {
+  const { selectedHotel } = useHotel();
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
@@ -17,15 +34,13 @@ const Bookings = () => {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const fetchData = async () => {
+    if (!selectedHotel) { setBookings([]); setLoading(false); return; }
     try {
       setLoading(true);
       setLoadError("");
       setLoadErrorVariant("error");
-      const hotelsRes = await axiosInstance.get("/hotels/my-hotels");
-      const hotel = hotelsRes.data.hotels?.[0];
-      if (!hotel) { setBookings([]); return; }
 
-      const bookingsRes = await axiosInstance.get(`/bookings/hotel/${hotel.hotel_id}`, { params: { limit: 100 } });
+      const bookingsRes = await axiosInstance.get(`/bookings/hotel/${selectedHotel.hotel_id}`, { params: { limit: 100 } });
       setBookings(bookingsRes.data.bookings);
     } catch (err) {
       if (err.response?.status === 403) {
@@ -42,7 +57,7 @@ const Bookings = () => {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [selectedHotel]);
 
   useEffect(() => {
     const bookingId = searchParams.get("bookingId");
@@ -64,24 +79,32 @@ const Bookings = () => {
     return matchesSearch && matchesStatus;
   });
 
+  const pendingCount = bookings.filter((b) => b.status === "pending").length;
+  const bookedCount = bookings.filter((b) => b.status === "booked").length;
+  const cancelledCount = bookings.filter((b) => b.status === "cancelled").length;
+  const rejectedCount = bookings.filter((b) => b.status === "rejected").length;
+
   const bookingStats = [
     { label: "Total Bookings", value: bookings.length, color: "bg-primary" },
-    { label: "Active", value: bookings.filter((b) => b.status === "booked").length, color: "bg-green-500" },
-    { label: "Cancelled", value: bookings.filter((b) => b.status === "cancelled").length, color: "bg-red-500" },
+    { label: "Pending", value: pendingCount, color: "bg-amber-500" },
+    { label: "Booked", value: bookedCount, color: "bg-green-500" },
+    { label: "Cancelled / Rejected", value: cancelledCount + rejectedCount, color: "bg-red-500" },
   ];
+
+  const getStatusConfig = (status) => STATUS_CONFIG[status] || { variant: "neutral", label: status };
 
   return (
     <div className="space-y-6">
       <PageHeader title="Bookings Management" subtitle="Manage all your hotel reservations and bookings" />
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {bookingStats.map((stat, index) => (
           <StatCard key={index} value={stat.value} label={stat.label} color={stat.color} />
         ))}
       </div>
 
-      <div className="bg-white rounded-2xl shadow-sm border border-brand-border p-6">
-        <div className="flex flex-col sm:flex-row gap-4">
+      <div className="bg-white rounded-2xl shadow-sm border border-brand-border p-4 sm:p-6">
+        <div className="flex flex-col sm:flex-row gap-3">
           <div className="flex-1">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
@@ -94,15 +117,13 @@ const Bookings = () => {
               />
             </div>
           </div>
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-3.5 py-2.5 border border-brand-border rounded-xl text-sm transition-colors hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
-          >
-            <option value="all">All Status</option>
-            <option value="booked">Booked</option>
-            <option value="cancelled">Cancelled</option>
-          </select>
+          <div className="w-full sm:w-44">
+            <CustomSelect
+              value={statusFilter}
+              onChange={setStatusFilter}
+              options={STATUS_FILTER_OPTIONS}
+            />
+          </div>
         </div>
       </div>
 
@@ -129,14 +150,15 @@ const Bookings = () => {
           <div className="hidden md:grid grid-cols-12 gap-3 px-6 py-3 bg-surface border-b border-brand-border text-xs font-semibold text-muted uppercase tracking-wider">
             <div className="col-span-3">Room</div>
             <div className="col-span-3">Guest</div>
-            <div className="col-span-3">Dates</div>
+            <div className="col-span-2">Dates</div>
             <div className="col-span-1">Price</div>
-            <div className="col-span-1">Status</div>
+            <div className="col-span-2">Status</div>
             <div className="col-span-1">Time</div>
           </div>
           <div className="divide-y divide-brand-border">
             {filteredBookings.map((booking) => {
               const totalPrice = bookingTotalPrice(booking);
+              const statusCfg = getStatusConfig(booking.status);
               return (
                 <div
                   key={booking.booking_id}
@@ -162,15 +184,15 @@ const Bookings = () => {
                       <p className="text-xs text-muted truncate">{booking.user?.email}</p>
                     </div>
                   </div>
-                  <div className="col-span-3 flex items-center">
+                  <div className="col-span-2 flex items-center">
                     <p className="text-sm text-slate-700">{formatDate(booking.checkInDate)} – {formatDate(booking.checkOutDate)}</p>
                   </div>
                   <div className="col-span-1 flex items-center">
                     <p className="text-sm font-medium text-slate-900 tabular-nums">{totalPrice != null ? `LKR ${totalPrice.toLocaleString()}` : "—"}</p>
                   </div>
-                  <div className="col-span-1 flex items-center">
-                    <Badge variant={booking.status === "booked" ? "success" : "danger"} className="px-2 py-0.5 text-[11px]">
-                      {booking.status}
+                  <div className="col-span-2 flex items-center">
+                    <Badge variant={statusCfg.variant} className="px-2 py-0.5 text-[11px]">
+                      {statusCfg.label}
                     </Badge>
                   </div>
                   <div className="col-span-1 flex items-center">
@@ -184,7 +206,11 @@ const Bookings = () => {
       )}
 
       {selectedBooking && (
-        <BookingDetailModal booking={selectedBooking} onClose={() => setSelectedBooking(null)} />
+        <BookingDetailModal
+          booking={selectedBooking}
+          onClose={() => setSelectedBooking(null)}
+          onBookingUpdated={fetchData}
+        />
       )}
     </div>
   );

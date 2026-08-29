@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   LayoutDashboard,
   Building2,
@@ -7,20 +7,38 @@ import {
   BarChart3,
   LogOut,
   X,
-  Hotel
+  Hotel,
+  ChevronDown,
+  Check,
+  Plus
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { useHotel } from "../context/HotelContext";
 import { ConfirmDialog } from "./ui";
 
 const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { logout } = useAuth();
+  const { hotels, selectedHotel, selectHotel } = useHotel();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [hotelDropdownOpen, setHotelDropdownOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setHotelDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const links = [
     { name: "Home", icon: LayoutDashboard, path: "/" },
+    { name: "Hotel Profile", icon: Building2, path: "/hotel-profile" },
     { name: "Rooms", icon: BedDouble, path: "/rooms" },
     { name: "Bookings", icon: CalendarDays, path: "/bookings" },
     { name: "Analytics", icon: BarChart3, path: "/analytics" },
@@ -102,10 +120,65 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
           ))}
         </nav>
 
-        {/* Hotel Profile + Logout */}
-        <div className="px-3 py-4 border-t border-brand-border space-y-1">
-          <p className="px-4 pb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Account</p>
-          <NavButton link={{ name: "Hotel Profile", icon: Building2, path: "/hotel-profile" }} />
+        {/* Hotel Selector + Logout */}
+        <div className="px-3 py-4 border-t border-brand-border space-y-2">
+          {hotels.length > 0 && (
+            <div className="relative" ref={dropdownRef}>
+              <button
+                onClick={() => setHotelDropdownOpen((prev) => !prev)}
+                className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl bg-tint border border-brand-border hover:border-primary/40 transition-all duration-200"
+              >
+                <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Hotel className="h-4 w-4 text-primary" />
+                </div>
+                <div className="flex-1 min-w-0 text-left">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted leading-none mb-0.5">Property</p>
+                  <p className="text-sm font-semibold text-slate-900 truncate">{selectedHotel?.name || "Select"}</p>
+                </div>
+                <ChevronDown className={`h-4 w-4 text-muted flex-shrink-0 transition-transform duration-200 ${hotelDropdownOpen ? "rotate-180" : ""}`} />
+              </button>
+
+              {hotelDropdownOpen && (
+                <div className="absolute bottom-full left-0 right-0 mb-1.5 bg-white rounded-xl border border-brand-border shadow-lg overflow-hidden animate-fadeIn z-50">
+                  <div className="py-1 max-h-48 overflow-y-auto">
+                    {hotels.map((h) => (
+                      <button
+                        key={h.hotel_id}
+                        onClick={() => {
+                          selectHotel(h.hotel_id);
+                          setHotelDropdownOpen(false);
+                        }}
+                        className={`flex items-center gap-2.5 w-full px-3 py-2 text-sm transition-colors ${
+                          selectedHotel?.hotel_id === h.hotel_id
+                            ? "bg-tint text-primary font-semibold"
+                            : "text-slate-700 hover:bg-surface"
+                        }`}
+                      >
+                        <span className="truncate flex-1 text-left">{h.name}</span>
+                        {selectedHotel?.hotel_id === h.hotel_id && (
+                          <Check className="h-4 w-4 text-primary flex-shrink-0" />
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="border-t border-brand-border">
+                    <button
+                      onClick={() => {
+                        setHotelDropdownOpen(false);
+                        navigate("/register-hotel");
+                        setSidebarOpen(false);
+                      }}
+                      className="flex items-center gap-2 w-full px-3 py-2.5 text-sm font-medium text-primary hover:bg-tint transition-colors"
+                    >
+                      <Plus className="h-4 w-4" />
+                      <span>Add new property</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           <button
             onClick={() => setShowLogoutConfirm(true)}
             className="flex items-center gap-3 w-full px-4 py-2.5 text-sm font-medium text-slate-600 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors duration-200"

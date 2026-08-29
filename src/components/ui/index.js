@@ -10,3 +10,4 @@ export { default as EmptyState } from "./EmptyState";
 export { default as PageHeader } from "./PageHeader";
 export { default as LoadingSpinner } from "./LoadingSpinner";
 export { default as ToggleChip } from "./ToggleChip";
+export { default as CustomSelect } from "./CustomSelect";
