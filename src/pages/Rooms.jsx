@@ -1,15 +1,21 @@
 import { useState, useEffect } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { BedDouble, Plus, Search, Trash2, Image, Clock, Check, AlertCircle } from "lucide-react";
 import axiosInstance from "../api/axiosInstance";
-import AddRoomModal from "../components/AddRoomModal";
+import { useHotel } from "../context/HotelContext";
 import RoomDetailsModal from "../components/RoomDetailsModal";
-import { PageHeader, StatCard, Alert, LoadingSpinner, EmptyState, Badge, Button } from "../components/ui";
+import { PageHeader, StatCard, Alert, LoadingSpinner, EmptyState, Badge, Button, CustomSelect } from "../components/ui";
+
+const FILTER_OPTIONS = [
+  { value: "all", label: "All Types" },
+  { value: "FAMILY", label: "Family" },
+  { value: "COUPLE", label: "Couple" },
+];
 
 const Rooms = () => {
+  const navigate = useNavigate();
+  const { selectedHotel } = useHotel();
   const [rooms, setRooms] = useState([]);
-  const [hotelId, setHotelId] = useState(null);
-  const [showModal, setShowModal] = useState(false);
   const [selectedRoom, setSelectedRoom] = useState(null);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -32,16 +38,13 @@ const Rooms = () => {
   };
 
   const fetchData = async () => {
+    if (!selectedHotel) { setRooms([]); setLoading(false); return; }
     try {
       setLoading(true);
       setLoadError("");
       setLoadErrorVariant("error");
-      const hotelsRes = await axiosInstance.get("/hotels/my-hotels");
-      const hotel = hotelsRes.data.hotels?.[0];
-      if (!hotel) { setRooms([]); return; }
-      setHotelId(hotel.hotel_id);
 
-      const roomsRes = await axiosInstance.get(`/rooms/hotel/${hotel.hotel_id}`, { params: { limit: 100 } });
+      const roomsRes = await axiosInstance.get(`/rooms/hotel/${selectedHotel.hotel_id}`, { params: { limit: 100 } });
       setRooms(roomsRes.data.rooms);
     } catch (err) {
       if (err.response?.status === 403) {
@@ -58,7 +61,7 @@ const Rooms = () => {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [selectedHotel]);
 
   useEffect(() => {
     const roomId = searchParams.get("roomId");
@@ -85,19 +88,19 @@ const Rooms = () => {
 
   const handleToggleBlock = async (e, room) => {
     e.stopPropagation();
-    const endpoint = room.isTemporaryBlocked
-      ? `/rooms/${room.room_id}/unblock`
-      : `/rooms/${room.room_id}/block`;
+    const endpoint = room.isOnHold
+      ? `/rooms/${room.room_id}/release`
+      : `/rooms/${room.room_id}/hold`;
     try {
       await axiosInstance.put(endpoint);
       setRooms((prev) =>
         prev.map((r) =>
           r.room_id === room.room_id
-            ? { ...r, isTemporaryBlocked: !r.isTemporaryBlocked }
+            ? { ...r, isOnHold: !r.isOnHold }
             : r
         )
       );
-      showRoomFeedback(room.room_id, "success", room.isTemporaryBlocked ? "Unblocked" : "Blocked");
+      showRoomFeedback(room.room_id, "success", room.isOnHold ? "Unblocked" : "Blocked");
     } catch {
       showRoomFeedback(room.room_id, "error", "Failed");
     }
@@ -112,11 +115,8 @@ const Rooms = () => {
 
   const familyCount = rooms.filter((r) => r.roomType === "FAMILY").length;
   const coupleCount = rooms.filter((r) => r.roomType === "COUPLE").length;
-  const blockedCount = rooms.filter((r) => r.isTemporaryBlocked).length;
+  const blockedCount = rooms.filter((r) => r.isOnHold).length;
 
-  // Family/Couple mirror the badge colors used on the room cards below
-  // (success green / purple) so the same room type always reads the same
-  // color everywhere on this page.
   const roomStats = [
     { label: "Total Rooms", value: rooms.length, color: "bg-primary" },
     { label: "Family", value: familyCount, color: "bg-green-500" },
@@ -128,9 +128,7 @@ const Rooms = () => {
     if (!time) return "";
     const [h, m] = time.split(":");
     const hour = parseInt(h);
-    const ampm = hour >= 12 ? "PM" : "AM";
-    const displayHour = hour % 12 || 12;
-    return `${displayHour}:${m} ${ampm}`;
+    return `${hour % 12 || 12}:${m} ${hour >= 12 ? "PM" : "AM"}`;
   };
 
   const bedTypeLabel = (type) => ({ SINGLE_BED: "single", DOUBLE_BED: "double", QUEEN: "queen", KING_SIZE: "king" }[type] || type);
@@ -138,7 +136,7 @@ const Rooms = () => {
   return (
     <div className="space-y-6">
       <PageHeader title="Room Management" subtitle="Manage your hotel rooms, availability, and pricing">
-        <Button onClick={() => setShowModal(true)}>
+        <Button onClick={() => navigate("/add-room")}>
           <Plus className="h-4 w-4 mr-2" />
           Add Room
         </Button>
@@ -150,8 +148,8 @@ const Rooms = () => {
         ))}
       </div>
 
-      <div className="bg-white rounded-2xl shadow-sm border border-brand-border p-6">
-        <div className="flex flex-col sm:flex-row gap-4">
+      <div className="bg-white rounded-2xl shadow-sm border border-brand-border p-4 sm:p-6">
+        <div className="flex flex-col sm:flex-row gap-3">
           <div className="flex-1">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
@@ -164,16 +162,12 @@ const Rooms = () => {
               />
             </div>
           </div>
-          <div className="flex gap-3">
-            <select
+          <div className="w-full sm:w-44">
+            <CustomSelect
               value={filterType}
-              onChange={(e) => setFilterType(e.target.value)}
-              className="px-3.5 py-2.5 border border-brand-border rounded-xl text-sm transition-colors hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
-            >
-              <option value="all">All Types</option>
-              <option value="FAMILY">Family</option>
-              <option value="COUPLE">Couple</option>
-            </select>
+              onChange={setFilterType}
+              options={FILTER_OPTIONS}
+            />
           </div>
         </div>
       </div>
@@ -196,7 +190,7 @@ const Rooms = () => {
             }
             action={
               rooms.length === 0 && (
-                <Button onClick={() => setShowModal(true)}>
+                <Button onClick={() => navigate("/add-room")}>
                   <Plus className="h-4 w-4 mr-2" />
                   Add Room
                 </Button>
@@ -228,7 +222,7 @@ const Rooms = () => {
                     {room.acType === "AC" ? "AC" : "Non-AC"}
                   </Badge>
                 </div>
-                {room.isTemporaryBlocked && (
+                {room.isOnHold && (
                   <div className="absolute top-3 right-3">
                     <Badge variant="danger" className="px-2 py-1">Blocked</Badge>
                   </div>
@@ -263,13 +257,13 @@ const Rooms = () => {
                     <button
                       onClick={(e) => handleToggleBlock(e, room)}
                       className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                        room.isTemporaryBlocked ? "bg-red-400" : "bg-green-500"
+                        room.isOnHold ? "bg-red-400" : "bg-green-500"
                       }`}
-                      title={room.isTemporaryBlocked ? "Click to unblock" : "Click to block"}
+                      title={room.isOnHold ? "Click to unblock" : "Click to block"}
                     >
                       <span
                         className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                          room.isTemporaryBlocked ? "translate-x-1" : "translate-x-6"
+                          room.isOnHold ? "translate-x-1" : "translate-x-6"
                         }`}
                       />
                     </button>
@@ -328,13 +322,6 @@ const Rooms = () => {
           ))}
         </div>
       )}
-
-      <AddRoomModal
-        isOpen={showModal}
-        onClose={() => setShowModal(false)}
-        hotelId={hotelId}
-        onRoomAdded={fetchData}
-      />
 
       {selectedRoom && (
         <RoomDetailsModal

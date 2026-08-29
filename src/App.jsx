@@ -4,6 +4,8 @@ import Rooms from "./pages/Rooms";
 import Bookings from "./pages/Bookings";
 import Analytics from "./pages/Analytics";
 import HotelProfile from "./pages/HotelProfile";
+import RegisterHotel from "./pages/RegisterHotel";
+import AddRoom from "./pages/AddRoom";
 import Login from "./pages/Login";
 import PrivateRoute from "./components/PrivateRoute";
 import Layout from "./components/Layout";
@@ -62,6 +64,22 @@ function App() {
             <Layout>
               <HotelProfile />
             </Layout>
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/register-hotel"
+        element={
+          <PrivateRoute>
+            <RegisterHotel />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/add-room"
+        element={
+          <PrivateRoute>
+            <AddRoom />
           </PrivateRoute>
         }
       />

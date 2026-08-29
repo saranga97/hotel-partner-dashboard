@@ -2,10 +2,12 @@ import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Menu, Bell, BedDouble, Calendar, Trash2, Pencil } from "lucide-react";
 import { useNotifications } from "../context/NotificationContext";
+import { useHotel } from "../context/HotelContext";
 
 const Topbar = ({ setSidebarOpen }) => {
   const user = JSON.parse(localStorage.getItem("ceylonstay_user"));
-  const hotelName = user ? `${user.firstName || ""} ${user.lastName || ""}`.trim() || "Partner" : "Partner";
+  const partnerName = user ? `${user.firstName || ""} ${user.lastName || ""}`.trim() || "Partner" : "Partner";
+  const { selectedHotel } = useHotel();
   const [showNotifications, setShowNotifications] = useState(false);
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
@@ -75,9 +77,9 @@ const Topbar = ({ setSidebarOpen }) => {
 
           <div className="hidden sm:block">
             <h1 className="text-lg font-semibold text-slate-900 tracking-tight">
-              {hotelName}
+              {selectedHotel?.name || "No Property"}
             </h1>
-            <p className="text-xs text-muted">Hotel Management</p>
+            <p className="text-xs text-muted">{partnerName}</p>
           </div>
         </div>
 
